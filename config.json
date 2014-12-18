@@ -1,0 +1,6 @@
+{
+    "imageStoreType": "riakcs",
+    "imageStoreConfig": { },
+    "metadataStoreType": "riak",
+    "metadataStoreConfig": { }
+}
