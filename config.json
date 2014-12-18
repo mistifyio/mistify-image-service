@@ -1,4 +1,6 @@
 {
+    "address": "",
+    "port": "9001",
     "imageStoreType": "riakcs",
     "imageStoreConfig": { },
     "metadataStoreType": "riak",

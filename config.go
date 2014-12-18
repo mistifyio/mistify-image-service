@@ -5,11 +5,23 @@ import (
     "encoding/json"
 )
 
+const (
+    DEFAULT_INTERFACE = ""
+    DEFAULT_PORT = "9001"
+)
+
 type (
 
     Config struct {
+        // HTTP server
+        Address string `json:"address"`
+        Port string `json:"port"`
+
+        // images store
         ImageStoreType string `json:"imageStoreType"`
         ImageStoreConfig map[string]string `json:"imageStoreConfig"`
+
+        // metadata store
         MetadataStoreType string `json:"metadataStoreType"`
         MetadataStoreConfig map[string] string `json:"metadataStoreConfig"`
     }
@@ -23,6 +35,8 @@ func ConfigFromFile(path string) (*Config, error) {
     }
 
     config := &Config{
+        Address: "0.0.0.0",
+        Port: "9001",
         ImageStoreType: "",
         ImageStoreConfig: make(map[string]string),
         MetadataStoreType: "",
