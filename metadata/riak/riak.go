@@ -12,3 +12,7 @@ type (
     }
 
 )
+
+func (self *Riak) Init(config map[string]string) error {
+    return nil
+}
