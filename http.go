@@ -1,92 +1,91 @@
 package imageservice
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"runtime"
+
+	"github.com/bakins/logrus-middleware"
 	"github.com/bakins/net-http-recover"
+	"github.com/gorilla/context"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-    "github.com/mistifyio/mistify-agent/log"
-	"os"
-    "strings"
-    "runtime"
-    "fmt"
-    "encoding/json"
 )
 
+const ctxKey string = "mistifyImageServiceContext"
+
 type (
-    
-    HttpRequest struct {
-		ResponseWriter http.ResponseWriter
-		Request        *http.Request
-		Context        *Context
-		vars           map[string]string
+	// HTTPResponse is a wrapper for http.ResponseWriter which provides access
+	// to several convenience methods
+	HTTPResponse struct {
+		http.ResponseWriter
 	}
 
-	HttpErrorMessage struct {
+	// HTTPError contains information for http error responses
+	HTTPError struct {
 		Message string   `json:"message"`
 		Code    int      `json:"code"`
 		Stack   []string `json:"stack"`
 	}
-
-    Chain struct {
-        alice.Chain
-        ctx *Context
-    }
 )
 
-func Run(ctx *Context, address string) error {
+// Run starts the server
+func Run(ctx *Context, port int) error {
 	router := mux.NewRouter()
 	router.StrictSlash(true)
 
-	chain := Chain {
-		ctx: ctx,
-		Chain: alice.New(
-			func(h http.Handler) http.Handler {
-				return handlers.CombinedLoggingHandler(os.Stdout, h)
-			},
-			handlers.CompressHandler,
-			func(h http.Handler) http.Handler {
-				return recovery.Handler(os.Stderr, h, true)
-			}),
+	// Common middleware applied to every request
+	logrusMiddleware := logrusmiddleware.Middleware{
+		Name: "mistify-image-service",
 	}
+	commonMiddleware := alice.New(
+		func(h http.Handler) http.Handler {
+			return logrusMiddleware.Handler(h, "")
+		},
+		handlers.CompressHandler,
+		func(h http.Handler) http.Handler {
+			return recovery.Handler(os.Stderr, h, true)
+		},
+		func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				context.Set(r, ctxKey, ctx)
+				h.ServeHTTP(w, r)
+			})
+		},
+	)
 
-	router.HandleFunc("/images", chain.RequestWrapper(listImages)).Methods("GET")
-	router.HandleFunc("/images", chain.RequestWrapper(putImage)).Methods("POST")
-	router.HandleFunc("/images/{id}", chain.RequestWrapper(getImage)).Methods("GET")
-	router.HandleFunc("/images/{id}", chain.RequestWrapper(deleteImage)).Methods("DELETE")
+	// NOTE: Due to weirdness with PrefixPath and StrictSlash, can't just pass
+	// a prefixed subrouter to the register functions and have the base path
+	// work cleanly. The register functions need to add a base path handler to
+	// the main router before setting subhandlers on either main or subrouter
+
+	RegisterImageRoutes("/images", router)
 
 	server := &http.Server{
-		Addr: address,
-		Handler: router,
+		Addr:           fmt.Sprintf(":%d", port),
+		Handler:        commonMiddleware.Then(router),
 		MaxHeaderBytes: 1 << 20,
 	}
 	return server.ListenAndServe()
 }
 
-func (c *Chain) RequestWrapper(fn func(*HttpRequest) *HttpErrorMessage) http.HandlerFunc {
-	return c.Then(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req := HttpRequest{
-			Context:        c.ctx,
-			ResponseWriter: w,
-			Request:        r,
-		}
-		if err := fn(&req); err != nil {
-			log.Error("%s\n\t%s\n", err.Message, strings.Join(err.Stack, "\t\n\t"))
-			req.JSON(err.Code, err)
-		}
-	})).ServeHTTP
-}
-
-func (r *HttpRequest) SetHeader(key, val string) {
-	r.ResponseWriter.Header().Set(key, val)
-}
-
-func (r *HttpRequest) NewError(err error, code int) *HttpErrorMessage {
-	if code <= 0 {
-		code = 500
+// JSON writes appropriate headers and JSON body to the http response
+func (hr *HTTPResponse) JSON(code int, obj interface{}) {
+	hr.Header().Set("Content-Type", "application/json")
+	hr.WriteHeader(code)
+	encoder := json.NewEncoder(hr)
+	if err := encoder.Encode(obj); err != nil {
+		hr.JSONError(http.StatusInternalServerError, err)
 	}
-	msg := HttpErrorMessage{
+}
+
+// JSONError prepares an HTTPError with a stack trace and writes it with
+// HTTPResponse.JSON
+func (hr *HTTPResponse) JSONError(code int, err error) {
+	httpError := &HTTPError{
 		Message: err.Error(),
 		Code:    code,
 		Stack:   make([]string, 0, 4),
@@ -97,34 +96,29 @@ func (r *HttpRequest) NewError(err error, code int) *HttpErrorMessage {
 			break
 		}
 		// Print this much at least.  If we can't find the source, it won't show.
-		msg.Stack = append(msg.Stack, fmt.Sprintf("%s:%d (0x%x)", file, line, pc))
+		httpError.Stack = append(httpError.Stack, fmt.Sprintf("%s:%d (0x%x)", file, line, pc))
 	}
-	return &msg
+	hr.JSON(code, httpError)
 }
 
-func (r *HttpRequest) JSON(code int, obj interface{}) *HttpErrorMessage {
-	r.SetHeader("Content-Type", "application/json")
-	r.ResponseWriter.WriteHeader(code)
-	encoder := json.NewEncoder(r.ResponseWriter)
-	if err := encoder.Encode(obj); err != nil {
-		return r.NewError(err, 500)
+// JSONMsg is a convenience method to write a JSON response with just a message
+// string
+func (hr *HTTPResponse) JSONMsg(code int, msg string) {
+	msgObj := map[string]string{
+		"message": msg,
+	}
+	hr.JSON(code, msgObj)
+}
+
+// SetContext sets a Context value for a request
+func SetContext(r *http.Request, ctx *Context) {
+	context.Set(r, ctxKey, ctx)
+}
+
+// GetContext retrieves a Context value for a request
+func GetContext(r *http.Request) *Context {
+	if value := context.Get(r, ctxKey); value != nil {
+		return value.(*Context)
 	}
 	return nil
 }
-
-func listImages(req *HttpRequest) *HttpErrorMessage {
-    return nil
-}
-
-func putImage(req *HttpRequest) *HttpErrorMessage {
-    return nil
-}
-
-func getImage(req *HttpRequest) *HttpErrorMessage {
-    return nil
-}
-
-func deleteImage(req *HttpRequest) *HttpErrorMessage {
-    return nil
-}
-
