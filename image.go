@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/mistifyio/mistify-image-service/images"
 	"github.com/mistifyio/mistify-image-service/metadata"
 )
 
@@ -79,7 +78,7 @@ func DeleteImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := ctx.ImageStore.Delete(image.ID); err != nil && !images.IsErrNotFound(err) {
+	if err := ctx.ImageStore.Delete(image.ID); err != nil {
 		hr.JSONError(http.StatusInternalServerError, err)
 		return
 	}
@@ -116,12 +115,13 @@ func getImage(w http.ResponseWriter, r *http.Request) (*metadata.Image, error) {
 	imageID := vars["imageID"]
 	image, err := ctx.MetadataStore.GetByID(imageID)
 	if err != nil {
-		if metadata.IsErrNotFound(err) {
-			hr.JSON(http.StatusNotFound, err.Error())
-			return nil, err
-		}
 		hr.JSONError(http.StatusInternalServerError, err)
 		return nil, err
 	}
+	if image == nil {
+		hr.JSON(http.StatusNotFound, err.Error())
+		return nil, err
+	}
+
 	return image, nil
 }
