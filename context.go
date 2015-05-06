@@ -82,7 +82,7 @@ func (ctx *Context) NewImageStore(storeType string) error {
 func (ctx *Context) NewMetadataStore(storeType string) error {
 	store := metadata.NewStore(storeType)
 	if store == nil {
-		return errors.New("unknown image store type")
+		return errors.New("unknown metadata store type")
 	}
 	ctx.MetadataStore = store
 	return nil

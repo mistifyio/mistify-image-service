@@ -14,6 +14,8 @@ import (
 
 var stores = map[string]func() Store{}
 
+const configKey = "imageStoreConfig"
+
 type (
 	// Store provides a common API for image storage backends
 	Store interface {

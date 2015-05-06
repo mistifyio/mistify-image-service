@@ -31,6 +31,10 @@ func ListImages(w http.ResponseWriter, r *http.Request) {
 		hr.JSONError(http.StatusInternalServerError, err)
 		return
 	}
+
+	if images == nil {
+		images = make([]*metadata.Image, 0)
+	}
 	hr.JSON(http.StatusOK, images)
 }
 
@@ -48,6 +52,16 @@ func FetchImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure sufficient information for fetching
+	if image.Source == "" {
+		hr.JSON(http.StatusBadRequest, "missing image source")
+		return
+	}
+	if image.Type == "" {
+		hr.JSON(http.StatusBadRequest, "missing image type")
+		return
+	}
+
 	image, err := ctx.Fetcher.Fetch(image)
 	if err != nil {
 		hr.JSONError(http.StatusInternalServerError, err)
@@ -60,8 +74,8 @@ func FetchImage(w http.ResponseWriter, r *http.Request) {
 func GetImage(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 
-	image, err := getImage(w, r)
-	if err != nil {
+	image := getImage(w, r)
+	if image == nil {
 		return
 	}
 
@@ -73,8 +87,8 @@ func DeleteImage(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 	ctx := GetContext(r)
 
-	image, err := getImage(w, r)
-	if err != nil {
+	image := getImage(w, r)
+	if image == nil {
 		return
 	}
 
@@ -94,8 +108,8 @@ func DeleteImage(w http.ResponseWriter, r *http.Request) {
 func DownloadImage(w http.ResponseWriter, r *http.Request) {
 	ctx := GetContext(r)
 
-	image, err := getImage(w, r)
-	if err != nil {
+	image := getImage(w, r)
+	if image == nil {
 		return
 	}
 
@@ -107,7 +121,7 @@ func DownloadImage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getImage(w http.ResponseWriter, r *http.Request) (*metadata.Image, error) {
+func getImage(w http.ResponseWriter, r *http.Request) *metadata.Image {
 	hr := HTTPResponse{w}
 	ctx := GetContext(r)
 	vars := mux.Vars(r)
@@ -116,12 +130,12 @@ func getImage(w http.ResponseWriter, r *http.Request) (*metadata.Image, error) {
 	image, err := ctx.MetadataStore.GetByID(imageID)
 	if err != nil {
 		hr.JSONError(http.StatusInternalServerError, err)
-		return nil, err
+		return nil
 	}
 	if image == nil {
-		hr.JSON(http.StatusNotFound, err.Error())
-		return nil, err
+		hr.JSON(http.StatusNotFound, nil)
+		return nil
 	}
 
-	return image, nil
+	return image
 }

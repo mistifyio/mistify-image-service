@@ -60,9 +60,10 @@ func (fetcher *Fetcher) fetchImage(image *metadata.Image) {
 	monitorStop := make(chan struct{}, 1)
 
 	defer func() {
-		// Finish up size monitoring
+		// Stop size monitoring
 		monitorStop <- struct{}{}
-		<-monitorStop
+		// Last size update
+		_ = fetcher.updateImageSize(image)
 		// Set final status
 		_ = image.SetFinished(err)
 	}()
@@ -110,14 +111,11 @@ func (fetcher *Fetcher) monitorDownload(image *metadata.Image, stop chan struct{
 	for {
 		select {
 		case <-stop:
-			// Final size update
-			_ = fetcher.updateImageSize(image)
-			stop <- struct{}{}
 			return
 		default:
 			// Periodic size update
 			_ = fetcher.updateImageSize(image)
-			time.Sleep(5)
+			time.Sleep(5 * time.Second)
 		}
 	}
 }

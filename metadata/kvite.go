@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"encoding/json"
+	"errors"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/kvite"
@@ -11,7 +12,7 @@ type (
 	// KVite is a metadata store using kvite
 	KVite struct {
 		db     *kvite.DB
-		config *KViteConfig
+		Config *KViteConfig
 	}
 
 	// KViteConfig contains necessary config options to set up kvite
@@ -28,6 +29,16 @@ var kviteLogFields = log.Fields{
 }
 
 const kviteBucket = "images"
+
+func (kvc *KViteConfig) Validate() error {
+	if kvc.Filename == "" {
+		return errors.New("empty filename")
+	}
+	if kvc.Table == "" {
+		return errors.New("empty table")
+	}
+	return nil
+}
 
 // Init parses the config and opens a connection to kvite
 func (kv *KVite) Init(rawConfig interface{}) error {
@@ -51,16 +62,25 @@ func (kv *KVite) Init(rawConfig interface{}) error {
 		return err
 	}
 
-	kv.config = config
+	if err := config.Validate(); err != nil {
+		log.WithFields(kviteLogFields).WithFields(log.Fields{
+			"error": err,
+		}).Error("failed config validation")
+
+		return err
+	}
+
+	kv.Config = config
 	log.WithFields(kviteLogFields).WithFields(log.Fields{
-		"config": kv.config,
+		"config": kv.Config,
 	}).Info("config loaded")
 
-	db, err := kvite.Open(config.Filename, config.Table)
+	// Create the kvite database connection
+	db, err := kvite.Open(kv.Config.Filename, kv.Config.Table)
 	if err != nil {
 		log.WithFields(kviteLogFields).WithFields(log.Fields{
 			"error":  err,
-			"config": kv.config,
+			"config": kv.Config,
 		}).Error("failed to open db connection")
 		return err
 	}
@@ -143,7 +163,13 @@ func (kv *KVite) GetByID(imageID string) (*Image, error) {
 		return nil
 	})
 
-	return &image, err
+	if err != nil {
+		return nil, err
+	}
+	if image.ID == "" {
+		return nil, nil
+	}
+	return &image, nil
 }
 
 // GetBySource retrieves an image from kvite using the image source
@@ -176,7 +202,13 @@ func (kv *KVite) GetBySource(imageSource string) (*Image, error) {
 		})
 	})
 
-	return &foundImage, err
+	if err != nil {
+		return nil, err
+	}
+	if foundImage.ID == "" {
+		return nil, nil
+	}
+	return &foundImage, nil
 }
 
 // Put stores an image in kvite
