@@ -12,7 +12,7 @@ import (
 func RegisterImageRoutes(prefix string, router *mux.Router) {
 	router.HandleFunc(prefix, ListImages).Queries("type", "{imageType:[a-zA-Z]}").Methods("GET")
 	router.HandleFunc(prefix, ListImages).Methods("GET")
-	//router.HandleFunc(prefix, UploadImage).Methods("PUT")
+	router.HandleFunc(prefix, UploadImage).Methods("PUT")
 	router.HandleFunc(prefix, FetchImage).Methods("POST")
 	sub := router.PathPrefix(prefix).Subrouter()
 	sub.HandleFunc("/{imageID}", GetImage).Methods("GET")
@@ -36,6 +36,29 @@ func ListImages(w http.ResponseWriter, r *http.Request) {
 		images = make([]*metadata.Image, 0)
 	}
 	hr.JSON(http.StatusOK, images)
+}
+
+// UploadImage adds and stores an image from the request body
+func UploadImage(w http.ResponseWriter, r *http.Request) {
+	hr := HTTPResponse{w}
+	ctx := GetContext(r)
+
+	if r.Header.Get("X-Image-Type") == "" {
+		hr.JSON(http.StatusBadRequest, "missing image type")
+		return
+	}
+	if r.ContentLength == 0 {
+		hr.JSON(http.StatusBadRequest, "missing content length")
+		return
+	}
+
+	image, err := ctx.Fetcher.Upload(r)
+	if err != nil {
+		hr.JSONError(http.StatusInternalServerError, err)
+		return
+	}
+
+	hr.JSON(http.StatusOK, image)
 }
 
 // FetchImage asynchronously retrieves and adds an image to the system from an

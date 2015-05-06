@@ -2,6 +2,7 @@ package imageservice
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -57,13 +58,7 @@ func (fetcher *Fetcher) Fetch(image *metadata.Image) (*metadata.Image, error) {
 // fetchImage downloads a remote image
 func (fetcher *Fetcher) fetchImage(image *metadata.Image) {
 	var err error
-	monitorStop := make(chan struct{}, 1)
-
 	defer func() {
-		// Stop size monitoring
-		monitorStop <- struct{}{}
-		// Last size update
-		_ = fetcher.updateImageSize(image)
 		// Set final status
 		_ = image.SetFinished(err)
 	}()
@@ -83,26 +78,68 @@ func (fetcher *Fetcher) fetchImage(image *metadata.Image) {
 		return
 	}
 
+	err = fetcher.transferImage(image, resp.Body, resp.ContentLength)
+}
+
+// Upload uploads an image synchronously
+func (fetcher *Fetcher) Upload(r *http.Request) (*metadata.Image, error) {
+	defer r.Body.Close()
+
+	// Metadata preparation and initial save
+	image := &metadata.Image{
+		Type:    r.Header.Get("X-Image-Type"),
+		Comment: r.Header.Get("X-Image-Comment"),
+		Store:   fetcher.ctx.MetadataStore,
+	}
+	image.NewID()
+	if image.Type == "" {
+		return nil, errors.New("missing image type")
+	}
+
+	if err := image.SetPending(); err != nil {
+		return nil, err
+	}
+
+	err := fetcher.transferImage(image, r.Body, r.ContentLength)
+	// Set final status
+	_ = image.SetFinished(err)
+	return image, err
+}
+
+// transferImage transfers an image from an input stream (e.g. resp.Body or
+// req.Body) to the image store. Closing of the stream should be handled by the
+// caller.
+func (fetcher *Fetcher) transferImage(image *metadata.Image, in io.ReadCloser, estimatedLength int64) error {
 	// Update status to indicate download has begun
-	if err = image.SetDownloading(resp.ContentLength); err != nil {
+	if err := image.SetDownloading(estimatedLength); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 			"image": image,
 		}).Error("failed to SetDownloading")
-		return
+		return err
 	}
+
+	// Stop monitoring when the download is done
+	monitorStop := make(chan struct{}, 1)
+	defer func() {
+		// Stop size monitoring
+		monitorStop <- struct{}{}
+		// Last size update
+		_ = fetcher.updateImageSize(image)
+	}()
 
 	// Start watching the size
 	go fetcher.monitorDownload(image, monitorStop)
 
-	// Stream the download
-	if err = fetcher.ctx.ImageStore.Put(image.ID, resp.Body); err != nil {
+	// Stream the image
+	if err := fetcher.ctx.ImageStore.Put(image.ID, in); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 			"image": image,
 		}).Error("failed to download")
-		return
+		return err
 	}
+	return nil
 }
 
 // monitorDownload periodically get the file stats from the image store and

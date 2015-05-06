@@ -30,6 +30,7 @@ var kviteLogFields = log.Fields{
 
 const kviteBucket = "images"
 
+// Validate checks whether the config is valid
 func (kvc *KViteConfig) Validate() error {
 	if kvc.Filename == "" {
 		return errors.New("empty filename")
