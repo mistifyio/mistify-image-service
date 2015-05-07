@@ -1,4 +1,4 @@
-// Package metadata handles the storing and retrieval of image metadata
+// Package metadata handles the storing and retrieval of image metadata.
 package metadata
 
 // stores maps names to functions that generate a new Store of that type.
