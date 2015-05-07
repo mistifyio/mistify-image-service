@@ -24,9 +24,15 @@ func RegisterImageRoutes(prefix string, router *mux.Router) {
 func ListImages(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 	ctx := GetContext(r)
-	vars := mux.Vars(r)
 
-	images, err := ctx.MetadataStore.List(vars["imageType"])
+	vars := mux.Vars(r)
+	imageType := vars["imageType"]
+	if imageType != "" && !metadata.IsValidImageType(imageType) {
+		hr.JSON(http.StatusBadRequest, "invalid type")
+		return
+	}
+
+	images, err := ctx.MetadataStore.List(imageType)
 	if err != nil {
 		hr.JSONError(http.StatusInternalServerError, err)
 		return
@@ -43,12 +49,9 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 	ctx := GetContext(r)
 
-	if r.Header.Get("X-Image-Type") == "" {
-		hr.JSON(http.StatusBadRequest, "missing image type")
-		return
-	}
-	if r.ContentLength == 0 {
-		hr.JSON(http.StatusBadRequest, "missing content length")
+	imageType := r.Header.Get("X-Image-Type")
+	if !metadata.IsValidImageType(imageType) {
+		hr.JSON(http.StatusBadRequest, "invalid X-Image-Type header")
 		return
 	}
 
@@ -80,8 +83,8 @@ func FetchImage(w http.ResponseWriter, r *http.Request) {
 		hr.JSON(http.StatusBadRequest, "missing image source")
 		return
 	}
-	if image.Type == "" {
-		hr.JSON(http.StatusBadRequest, "missing image type")
+	if !metadata.IsValidImageType(image.Type) {
+		hr.JSON(http.StatusBadRequest, "invalid image type")
 		return
 	}
 

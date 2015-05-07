@@ -14,6 +14,18 @@ const (
 	StatusError       = "error"
 )
 
+// Valid image types
+const (
+	ImageTypeKVM       = "kvm"
+	ImageTypeContainer = "container"
+)
+
+// Map of valid image types for quick lookups
+var ValidImageTypes = map[string]struct{}{
+	ImageTypeKVM:       struct{}{},
+	ImageTypeContainer: struct{}{},
+}
+
 type (
 	// Image is metadata for an image
 	Image struct {
@@ -65,4 +77,10 @@ func (image *Image) SetFinished(err error) error {
 
 	image.DownloadEnd = time.Now()
 	return image.Store.Put(image)
+}
+
+// IsValidImageType tests whether the image type is valid
+func IsValidImageType(imageType string) bool {
+	_, ok := ValidImageTypes[imageType]
+	return ok
 }
