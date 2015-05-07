@@ -123,7 +123,9 @@ func (kv *KVite) List(imageType string) ([]*Image, error) {
 				}).Error("failed to parse image json")
 				return err
 			}
-			images = append(images, image)
+			if imageType == "" || image.Type == imageType {
+				images = append(images, image)
+			}
 			return nil
 		})
 	})
