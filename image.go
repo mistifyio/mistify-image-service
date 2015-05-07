@@ -10,7 +10,7 @@ import (
 
 // RegisterImageRoutes registers the image routes and handlers
 func RegisterImageRoutes(prefix string, router *mux.Router) {
-	router.HandleFunc(prefix, ListImages).Queries("type", "{imageType:[a-zA-Z]}").Methods("GET")
+	router.HandleFunc(prefix, ListImages).Queries("type", "{imageType:[a-zA-Z]+}").Methods("GET")
 	router.HandleFunc(prefix, ListImages).Methods("GET")
 	router.HandleFunc(prefix, UploadImage).Methods("PUT")
 	router.HandleFunc(prefix, FetchImage).Methods("POST")
