@@ -36,6 +36,15 @@ func Register(name string, newFunc func() Store) {
 	stores[name] = newFunc
 }
 
+// List registered store names
+func List() []string {
+	names := make([]string, 0, len(stores))
+	for name := range stores {
+		names = append(names, name)
+	}
+	return names
+}
+
 // NewStore creates a new instance of a Store from a name
 func NewStore(name string) Store {
 	newFunc, ok := stores[name]
