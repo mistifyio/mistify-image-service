@@ -19,6 +19,9 @@ func (ms *MockStore) Get(id string, out io.Writer) error  { return nil }
 func (ms *MockStore) Put(id string, in io.Reader) error   { return nil }
 func (ms *MockStore) Delete(id string) error              { return nil }
 
+var mockImageID = "foobar"
+var mockImageData = []byte("testdatatestdatatestdata")
+
 func TestMain(m *testing.M) {
 	log.SetLevel(log.WarnLevel)
 
