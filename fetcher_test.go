@@ -13,13 +13,13 @@ import (
 
 var mockImageData = []byte("testdatatestdatatestdata")
 
-func TestFetcherUpload(t *testing.T) {
+func TestFetcherReceive(t *testing.T) {
 	req, err := http.NewRequest("GET", "http://localhost", bytes.NewReader(mockImageData))
 	assert.NoError(t, err)
 	req.Header.Add("X-Image-Type", "kvm")
 	req.Header.Add("X-Image-Comment", "test image")
 
-	image, err := ctx.Fetcher.Upload(req)
+	image, err := ctx.Fetcher.Receive(req)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 	assert.EqualValues(t, len(mockImageData), image.Size)
