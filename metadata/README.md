@@ -39,6 +39,13 @@ func IsValidImageType(imageType string) bool
 ```
 IsValidImageType tests whether the image type is valid
 
+#### func  List
+
+```go
+func List() []string
+```
+List registered store names
+
 #### func  Register
 
 ```go
@@ -50,16 +57,16 @@ Register adds a new Store under a name
 
 ```go
 type Image struct {
-	ID            string
-	Source        string
-	Type          string
-	Comment       string
-	Status        string
-	Size          int64
-	ExpectedSize  int64
-	DownloadStart time.Time
-	DownloadEnd   time.Time
-	Store         Store `json:"-"`
+	ID            string    `json:"id"`
+	Source        string    `json:"source"`
+	Type          string    `json:"type"`
+	Comment       string    `json:"comment"`
+	Status        string    `json:"status"`
+	Size          int64     `json:"size"`
+	ExpectedSize  int64     `json:"expected_size"`
+	DownloadStart time.Time `json:"download_start"`
+	DownloadEnd   time.Time `json:"download_end"`
+	Store         Store     `json:"-"`
 }
 ```
 
