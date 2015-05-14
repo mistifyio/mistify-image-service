@@ -80,8 +80,8 @@ func (fetcher *Fetcher) fetchImage(image *metadata.Image) {
 	err = fetcher.transferImage(image, resp.Body, resp.ContentLength)
 }
 
-// Upload uploads an image synchronously
-func (fetcher *Fetcher) Upload(r *http.Request) (*metadata.Image, error) {
+// Receive adds and saves an image synchronously from the request body
+func (fetcher *Fetcher) Receive(r *http.Request) (*metadata.Image, error) {
 	defer r.Body.Close()
 
 	// Metadata preparation and initial save

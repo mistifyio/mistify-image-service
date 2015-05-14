@@ -67,6 +67,13 @@ func ListImages(w http.ResponseWriter, r *http.Request)
 ```
 ListImages gets a list of images, optionally filtered by type
 
+#### func  ReceiveImage
+
+```go
+func ReceiveImage(w http.ResponseWriter, r *http.Request)
+```
+ReceiveImage adds and stores an image from the request body
+
 #### func  RegisterImageRoutes
 
 ```go
@@ -87,13 +94,6 @@ Run starts the server
 func SetContext(r *http.Request, ctx *Context)
 ```
 SetContext sets a Context value for a request
-
-#### func  UploadImage
-
-```go
-func UploadImage(w http.ResponseWriter, r *http.Request)
-```
-UploadImage adds and stores an image from the request body
 
 #### type Context
 
@@ -165,12 +165,12 @@ func (fetcher *Fetcher) Fetch(image *metadata.Image) (*metadata.Image, error)
 ```
 Fetch runs pre-flight checks and kicks off an asynchronous image download
 
-#### func (*Fetcher) Upload
+#### func (*Fetcher) Receive
 
 ```go
-func (fetcher *Fetcher) Upload(r *http.Request) (*metadata.Image, error)
+func (fetcher *Fetcher) Receive(r *http.Request) (*metadata.Image, error)
 ```
-Upload uploads an image synchronously
+Receive adds and saves an image synchronously from the request body
 
 #### type HTTPError
 

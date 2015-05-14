@@ -86,7 +86,7 @@ func (fs *FS) Init(rawConfig interface{}) error {
 			"error":       err,
 			"dir":         config.Dir,
 			"desiredMode": mode,
-		}).Error("failed to set dir permissions")
+		}).Error("failed to set directory permissions")
 		return err
 	}
 
