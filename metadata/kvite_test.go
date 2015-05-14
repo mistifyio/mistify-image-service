@@ -1,6 +1,7 @@
 package metadata_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/mistifyio/mistify-image-service/metadata"
@@ -36,7 +37,8 @@ func TestKViteConfigValidate(t *testing.T) {
 
 func TestKViteInit(t *testing.T) {
 	kv := metadata.NewStore("kvite")
-	assert.NoError(t, kv.Init(kviteConfig))
+	configBytes, _ := json.Marshal(kviteConfig)
+	assert.NoError(t, kv.Init(configBytes))
 
 	kviteStore = kv
 }

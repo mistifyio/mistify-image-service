@@ -42,23 +42,14 @@ func (kvc *KViteConfig) Validate() error {
 }
 
 // Init parses the config and opens a connection to kvite
-func (kv *KVite) Init(rawConfig interface{}) error {
+func (kv *KVite) Init(configBytes []byte) error {
 	config := &KViteConfig{}
 
-	// Parse the config using json as a middleman
-	configBytes, err := json.Marshal(rawConfig)
-	if err != nil {
-		log.WithFields(kviteLogFields).WithFields(log.Fields{
-			"error":     err,
-			"rawConfig": rawConfig,
-		}).Error("failed to marshal rawConfig to json")
-		return err
-	}
+	// Parse the config json
 	if err := json.Unmarshal(configBytes, config); err != nil {
 		log.WithFields(kviteLogFields).WithFields(log.Fields{
-			"error":     err,
-			"rawConfig": rawConfig,
-			"json":      string(configBytes),
+			"error": err,
+			"json":  string(configBytes),
 		}).Error("failed to unmarshal config json")
 		return err
 	}

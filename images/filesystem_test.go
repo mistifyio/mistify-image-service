@@ -2,6 +2,7 @@ package images_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/mistifyio/mistify-image-service/images"
@@ -25,7 +26,8 @@ func TestFSStore(t *testing.T) {
 
 func TestFSInit(t *testing.T) {
 	fs := images.NewStore("fs")
-	assert.NoError(t, fs.Init(fsConfig))
+	configBytes, _ := json.Marshal(fsConfig)
+	assert.NoError(t, fs.Init(configBytes))
 
 	fsStore = fs
 }

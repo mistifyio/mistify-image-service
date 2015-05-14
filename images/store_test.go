@@ -12,7 +12,7 @@ import (
 
 type MockStore struct{}
 
-func (ms *MockStore) Init(i interface{}) error            { return nil }
+func (ms *MockStore) Init(b []byte) error                 { return nil }
 func (ms *MockStore) Shutdown() error                     { return nil }
 func (ms *MockStore) Stat(id string) (os.FileInfo, error) { return *new(os.FileInfo), nil }
 func (ms *MockStore) Get(id string, out io.Writer) error  { return nil }

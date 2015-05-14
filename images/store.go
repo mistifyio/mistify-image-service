@@ -21,7 +21,7 @@ type (
 	Store interface {
 		// Init handles casting to the appropriate config struct and then
 		// performing any connection / initialization needed for the Store
-		Init(interface{}) error
+		Init([]byte) error
 		// Shutdown handles disconnection and cleanup for the Store
 		Shutdown() error
 

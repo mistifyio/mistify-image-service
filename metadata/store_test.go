@@ -11,7 +11,7 @@ import (
 
 type MockStore struct{}
 
-func (ms *MockStore) Init(i interface{}) error                      { return nil }
+func (ms *MockStore) Init(b []byte) error                           { return nil }
 func (ms *MockStore) Shutdown() error                               { return nil }
 func (ms *MockStore) List(s string) ([]*metadata.Image, error)      { return []*metadata.Image{}, nil }
 func (ms *MockStore) GetByID(s string) (*metadata.Image, error)     { return &metadata.Image{}, nil }

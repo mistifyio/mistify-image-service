@@ -141,7 +141,7 @@ GetBySource retrieves an image from kvite using the image source
 #### func (*KVite) Init
 
 ```go
-func (kv *KVite) Init(rawConfig interface{}) error
+func (kv *KVite) Init(configBytes []byte) error
 ```
 Init parses the config and opens a connection to kvite
 
@@ -190,7 +190,7 @@ Validate checks whether the config is valid
 type Store interface {
 	// Init handles casting to the appropriate config struct and then
 	// performing any connection / initialization needed for the Store
-	Init(interface{}) error
+	Init([]byte) error
 	// Shutdown handles disconnection and cleanup for the Store
 	Shutdown() error
 

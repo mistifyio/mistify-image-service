@@ -1,6 +1,7 @@
 package imageservice
 
 import (
+	"encoding/json"
 	"errors"
 
 	log "github.com/Sirupsen/logrus"
@@ -32,7 +33,8 @@ func NewContext() (*Context, error) {
 		return nil, err
 	}
 
-	imageStoreConfig := viper.Get("imageStoreConfig")
+	// json errors would have been caught by viper when loading the file
+	imageStoreConfig, _ := json.Marshal(viper.Get("imageStoreConfig"))
 	if err := ctx.ImageStore.Init(imageStoreConfig); err != nil {
 		log.WithFields(log.Fields{
 			"error":  err,
@@ -52,7 +54,8 @@ func NewContext() (*Context, error) {
 		return nil, err
 	}
 
-	metadataStoreConfig := viper.Get("metadataStoreConfig")
+	// json errors would have been caught by viper when loading the file
+	metadataStoreConfig, _ := json.Marshal(viper.Get("metadataStoreConfig"))
 	if err := ctx.MetadataStore.Init(metadataStoreConfig); err != nil {
 		log.WithFields(log.Fields{
 			"error":  err,

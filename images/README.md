@@ -6,6 +6,13 @@ Package images handles the storing and retrieval of raw image data.
 
 ## Usage
 
+#### func  List
+
+```go
+func List() []string
+```
+List registered store names
+
 #### func  Register
 
 ```go
@@ -40,7 +47,7 @@ Get retrieves an image from the filesystem
 #### func (*FS) Init
 
 ```go
-func (fs *FS) Init(rawConfig interface{}) error
+func (fs *FS) Init(configBytes []byte) error
 ```
 Init parses the config and ensures the directory exists
 
@@ -88,7 +95,7 @@ Validate checks whether the config is valid
 type Store interface {
 	// Init handles casting to the appropriate config struct and then
 	// performing any connection / initialization needed for the Store
-	Init(interface{}) error
+	Init([]byte) error
 	// Shutdown handles disconnection and cleanup for the Store
 	Shutdown() error
 
