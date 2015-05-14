@@ -44,7 +44,6 @@ func Run(ctx *Context, port int) error {
 		func(h http.Handler) http.Handler {
 			return logrusMiddleware.Handler(h, "")
 		},
-		//handlers.CompressHandler,
 		func(h http.Handler) http.Handler {
 			return recovery.Handler(os.Stderr, h, true)
 		},
