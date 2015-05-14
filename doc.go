@@ -10,7 +10,7 @@ HTTP API Endpoints
 
 	/images
 		* GET  - Retrieve a list of images, optionally filtered by type.
-		* POST - Fetch and store an image
+		* POST - Fetch and store an image from an external http source
 		* PUT  - Upload and store image
 
 	/images/{imageID}
