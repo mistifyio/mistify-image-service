@@ -51,7 +51,7 @@ http () {
 }
 
 clean () {
-    CLEANIDS=($(curl --fail -s -X GET "http://$HOST:$PORT/images" | jq -r .[].ID))
+    CLEANIDS=($(curl --fail -s -X GET "http://$HOST:$PORT/images" | jq -r .[].id))
     for CLEANID in "${CLEANIDS[@]}"
     do
         _=$(curl -s -X DELETE "http://$HOST:$PORT/images/$CLEANID")
@@ -67,7 +67,7 @@ header "UPLOAD IMAGE"
 XIT="X-Image-Type: kvm"
 XIC="X-Image-Comment: uploaded image"
 http PUT images --data-binary "@$FILE"
-ID=$(echo "$OUTPUT" | jq -r .ID)
+ID=$(echo "$OUTPUT" | jq -r .id)
 
 header "GET IMAGE INFO"
 http GET images/$ID
