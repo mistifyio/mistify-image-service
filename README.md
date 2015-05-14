@@ -29,51 +29,6 @@ comment provided via headers X-Image-Type and X-Image-Comment, respectively.
 
 ## Usage
 
-#### func  DeleteImage
-
-```go
-func DeleteImage(w http.ResponseWriter, r *http.Request)
-```
-DeleteImage removes an image.
-
-#### func  DownloadImage
-
-```go
-func DownloadImage(w http.ResponseWriter, r *http.Request)
-```
-DownloadImage streams an image data
-
-#### func  FetchImage
-
-```go
-func FetchImage(w http.ResponseWriter, r *http.Request)
-```
-FetchImage asynchronously retrieves and adds an image to the system from an
-external source. If image has already been downloaded (same source), the
-existing image data will be returned. Getting the image information after a
-successful fetch has been initiated will show current download status.
-
-#### func  GetImage
-
-```go
-func GetImage(w http.ResponseWriter, r *http.Request)
-```
-GetImage retrieves information about an image.
-
-#### func  ListImages
-
-```go
-func ListImages(w http.ResponseWriter, r *http.Request)
-```
-ListImages gets a list of images, optionally filtered by type
-
-#### func  ReceiveImage
-
-```go
-func ReceiveImage(w http.ResponseWriter, r *http.Request)
-```
-ReceiveImage adds and stores an image from the request body
-
 #### func  RegisterImageRoutes
 
 ```go

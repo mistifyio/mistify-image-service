@@ -11,18 +11,18 @@ import (
 
 // RegisterImageRoutes registers the image routes and handlers
 func RegisterImageRoutes(prefix string, router *mux.Router) {
-	router.HandleFunc(prefix, ListImages).Queries("type", "{imageType:[a-zA-Z]+}").Methods("GET")
-	router.HandleFunc(prefix, ListImages).Methods("GET")
-	router.HandleFunc(prefix, ReceiveImage).Methods("PUT")
-	router.HandleFunc(prefix, FetchImage).Methods("POST")
+	router.HandleFunc(prefix, listImagesHandler).Queries("type", "{imageType:[a-zA-Z]+}").Methods("GET")
+	router.HandleFunc(prefix, listImagesHandler).Methods("GET")
+	router.HandleFunc(prefix, receiveImageHandler).Methods("PUT")
+	router.HandleFunc(prefix, fetchImageHandler).Methods("POST")
 	sub := router.PathPrefix(prefix).Subrouter()
-	sub.HandleFunc("/{imageID}", GetImage).Methods("GET")
-	sub.HandleFunc("/{imageID}", DeleteImage).Methods("DELETE")
-	sub.HandleFunc("/{imageID}/download", DownloadImage).Methods("GET")
+	sub.HandleFunc("/{imageID}", getImageHandler).Methods("GET")
+	sub.HandleFunc("/{imageID}", deleteImageHandler).Methods("DELETE")
+	sub.HandleFunc("/{imageID}/download", downloadImageHandler).Methods("GET")
 }
 
-// ListImages gets a list of images, optionally filtered by type
-func ListImages(w http.ResponseWriter, r *http.Request) {
+// listImagesHandler gets a list of images, optionally filtered by type
+func listImagesHandler(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 	ctx := GetContext(r)
 
@@ -45,8 +45,8 @@ func ListImages(w http.ResponseWriter, r *http.Request) {
 	hr.JSON(http.StatusOK, images)
 }
 
-// ReceiveImage adds and stores an image from the request body
-func ReceiveImage(w http.ResponseWriter, r *http.Request) {
+// receiveImageHandler adds and stores an image from the request body
+func receiveImageHandler(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 	ctx := GetContext(r)
 
@@ -65,11 +65,12 @@ func ReceiveImage(w http.ResponseWriter, r *http.Request) {
 	hr.JSON(http.StatusOK, image)
 }
 
-// FetchImage asynchronously retrieves and adds an image to the system from an
-// external source. If image has already been downloaded (same source), the
-// existing image data will be returned. Getting the image information after a
-// successful fetch has been initiated will show current download status.
-func FetchImage(w http.ResponseWriter, r *http.Request) {
+// fetchImageHandler asynchronously retrieves and adds an image to the system
+// from an external source. If image has already been downloaded (same source),
+// the existing image data will be returned. Getting the image information
+// after a successful fetch has been initiated will show current download
+// status.
+func fetchImageHandler(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 	ctx := GetContext(r)
 
@@ -97,8 +98,8 @@ func FetchImage(w http.ResponseWriter, r *http.Request) {
 	hr.JSON(http.StatusAccepted, image)
 }
 
-// GetImage retrieves information about an image.
-func GetImage(w http.ResponseWriter, r *http.Request) {
+// getImageHandler retrieves information about an image.
+func getImageHandler(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 
 	image := getImage(w, r)
@@ -109,8 +110,8 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 	hr.JSON(http.StatusOK, image)
 }
 
-// DeleteImage removes an image.
-func DeleteImage(w http.ResponseWriter, r *http.Request) {
+// deleteImageHandler removes an image.
+func deleteImageHandler(w http.ResponseWriter, r *http.Request) {
 	hr := HTTPResponse{w}
 	ctx := GetContext(r)
 
@@ -131,8 +132,8 @@ func DeleteImage(w http.ResponseWriter, r *http.Request) {
 	hr.JSON(http.StatusOK, image)
 }
 
-// DownloadImage streams an image data
-func DownloadImage(w http.ResponseWriter, r *http.Request) {
+// downloadImageHandler streams an image data
+func downloadImageHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := GetContext(r)
 
 	image := getImage(w, r)
