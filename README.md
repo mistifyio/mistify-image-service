@@ -23,10 +23,9 @@ external source over http.
     /images/{imageID}/download
     	* GET - Download an image
 
-Image information returned and for fetching will use the metadata.Image struct.
-The one exception is for uploading an image, the body should be the image data,
-with the image type and optional comment provided in the headers X-Image-Type
-and X-Image-Comment, respectively.
+Image information uses the metadata.Image struct. When directly uploading an
+image, the body should be the raw image data, with the image type and optional
+comment provided via headers X-Image-Type and X-Image-Comment, respectively.
 
 ## Usage
 

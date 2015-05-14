@@ -77,7 +77,6 @@ func (fetcher *Fetcher) fetchImage(image *metadata.Image) {
 		}).Error(err)
 		return
 	}
-
 	err = fetcher.transferImage(image, resp.Body, resp.ContentLength)
 }
 
@@ -109,7 +108,7 @@ func (fetcher *Fetcher) Upload(r *http.Request) (*metadata.Image, error) {
 // transferImage transfers an image from an input stream (e.g. resp.Body or
 // req.Body) to the image store. Closing of the stream should be handled by the
 // caller.
-func (fetcher *Fetcher) transferImage(image *metadata.Image, in io.ReadCloser, estimatedLength int64) error {
+func (fetcher *Fetcher) transferImage(image *metadata.Image, in io.Reader, estimatedLength int64) error {
 	// Update status to indicate download has begun
 	if err := image.SetDownloading(estimatedLength); err != nil {
 		log.WithFields(log.Fields{
@@ -120,10 +119,10 @@ func (fetcher *Fetcher) transferImage(image *metadata.Image, in io.ReadCloser, e
 	}
 
 	// Stop monitoring when the download is done
-	monitorStop := make(chan struct{}, 1)
+	monitorStop := make(chan struct{})
 	defer func() {
 		// Stop size monitoring
-		monitorStop <- struct{}{}
+		close(monitorStop)
 		// Last size update
 		_ = fetcher.updateImageSize(image)
 	}()
@@ -142,7 +141,7 @@ func (fetcher *Fetcher) transferImage(image *metadata.Image, in io.ReadCloser, e
 	return nil
 }
 
-// monitorDownload periodically get the file stats from the image store and
+// monitorDownload periodically gets the file stats from the image store and
 // updates the size in the metadata.
 func (fetcher *Fetcher) monitorDownload(image *metadata.Image, stop chan struct{}) {
 	for {
