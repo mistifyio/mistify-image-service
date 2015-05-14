@@ -3,6 +3,7 @@ package imageservice
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/mistifyio/mistify-image-service/metadata"
@@ -139,7 +140,12 @@ func DownloadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Length", string(image.Size))
+	if image.Status != metadata.StatusComplete {
+		http.Error(w, "incomplete", 404)
+		return
+	}
+
+	w.Header().Set("Content-Length", strconv.FormatInt(image.Size, 10))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	if err := ctx.ImageStore.Get(image.ID, w); err != nil {
 		http.Error(w, err.Error(), 500)

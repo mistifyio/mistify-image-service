@@ -10,7 +10,6 @@ import (
 	"github.com/bakins/logrus-middleware"
 	"github.com/bakins/net-http-recover"
 	"github.com/gorilla/context"
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 )
@@ -45,7 +44,7 @@ func Run(ctx *Context, port int) error {
 		func(h http.Handler) http.Handler {
 			return logrusMiddleware.Handler(h, "")
 		},
-		handlers.CompressHandler,
+		//handlers.CompressHandler,
 		func(h http.Handler) http.Handler {
 			return recovery.Handler(os.Stderr, h, true)
 		},
