@@ -9,9 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var fsConfig = &images.FSConfig{
-	Dir: "/tmp/testimages",
-}
+var fsConfig = &images.FSConfig{}
 
 var fsStore images.Store
 

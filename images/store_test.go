@@ -2,6 +2,7 @@ package images_test
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -23,9 +24,33 @@ var mockImageID = "foobar"
 var mockImageData = []byte("testdatatestdatatestdata")
 
 func TestMain(m *testing.M) {
+	// So that defers run when we exit
+	code := 0
+	defer func() {
+		os.Exit(code)
+	}()
+
 	log.SetLevel(log.WarnLevel)
 
-	os.Exit(m.Run())
+	// Store-specific setup
+	var err error
+
+	// Filesystem
+	if fsConfig.Dir, err = ioutil.TempDir("", "testimages"); err != nil {
+		log.WithField("error", err).Fatal("failed to create filesystem temp dir")
+		return
+	}
+	defer func() {
+		if err := os.RemoveAll(fsConfig.Dir); err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+				"dir":   fsConfig.Dir,
+			}).Error("could not clean up filesystem")
+		}
+	}()
+
+	// Run the tests
+	code = m.Run()
 }
 
 func TestList(t *testing.T) {
