@@ -48,7 +48,7 @@ func TestFetcherFetch(t *testing.T) {
 		if image.Status == metadata.StatusComplete || image.Status == metadata.StatusError {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	assert.Equal(t, metadata.StatusComplete, image.Status)
 	assert.Equal(t, "kvm", image.Type)
