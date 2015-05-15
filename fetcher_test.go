@@ -34,6 +34,7 @@ func TestFetcherFetch(t *testing.T) {
 	defer ts.Close()
 
 	image := &metadata.Image{
+		ID:     metadata.NewID(),
 		Source: ts.URL,
 		Type:   "kvm",
 	}

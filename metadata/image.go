@@ -42,9 +42,9 @@ type (
 	}
 )
 
-// NewID generates a new unique ID for the image
-func (image *Image) NewID() {
-	image.ID = uuid.New()
+// NewID generates a new unique uuid
+func NewID() string {
+	return uuid.New()
 }
 
 // SetPending updates an image to pending status

@@ -46,6 +46,13 @@ func List() []string
 ```
 List registered store names
 
+#### func  NewID
+
+```go
+func NewID() string
+```
+NewID generates a new unique uuid
+
 #### func  Register
 
 ```go
@@ -71,13 +78,6 @@ type Image struct {
 ```
 
 Image is metadata for an image
-
-#### func (*Image) NewID
-
-```go
-func (image *Image) NewID()
-```
-NewID generates a new unique ID for the image
 
 #### func (*Image) SetDownloading
 

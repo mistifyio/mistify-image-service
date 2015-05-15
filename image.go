@@ -79,6 +79,7 @@ func fetchImageHandler(w http.ResponseWriter, r *http.Request) {
 		hr.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
+	image.ID = metadata.NewID()
 
 	// Ensure sufficient information for fetching
 	if image.Source == "" {

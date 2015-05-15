@@ -43,7 +43,6 @@ func (fetcher *Fetcher) Fetch(image *metadata.Image) (*metadata.Image, error) {
 	}
 
 	// Additional metadata preparation and initial save
-	image.NewID()
 	image.Store = fetcher.ctx.MetadataStore
 	if err := image.SetPending(); err != nil {
 		return nil, err
@@ -86,11 +85,12 @@ func (fetcher *Fetcher) Receive(r *http.Request) (*metadata.Image, error) {
 
 	// Metadata preparation and initial save
 	image := &metadata.Image{
+		ID:      metadata.NewID(),
 		Type:    r.Header.Get("X-Image-Type"),
 		Comment: r.Header.Get("X-Image-Comment"),
 		Store:   fetcher.ctx.MetadataStore,
 	}
-	image.NewID()
+
 	if image.Type == "" {
 		return nil, errors.New("missing image type")
 	}

@@ -8,11 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestImageNewID(t *testing.T) {
-	image := &metadata.Image{}
-	assert.Empty(t, image.ID)
-	image.NewID()
-	assert.NotEmpty(t, image.ID)
+func TestNewID(t *testing.T) {
+	id := metadata.NewID()
+	assert.NotEmpty(t, id)
 }
 
 func TestIsValidImageType(t *testing.T) {
@@ -25,9 +23,9 @@ func TestIsValidImageType(t *testing.T) {
 func newImage() *metadata.Image {
 	registerMockStore()
 	image := &metadata.Image{
+		ID:    metadata.NewID(),
 		Store: metadata.NewStore("mock"),
 	}
-	image.NewID()
 	return image
 }
 

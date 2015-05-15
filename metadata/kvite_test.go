@@ -81,8 +81,8 @@ func TestKViteShutdown(t *testing.T) {
 
 func init() {
 	kviteImage = &metadata.Image{
+		ID:     metadata.NewID(),
 		Type:   "kvm",
 		Source: "http://localhost",
 	}
-	kviteImage.NewID()
 }
