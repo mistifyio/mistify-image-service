@@ -9,8 +9,7 @@ import (
 )
 
 var kviteConfig = &metadata.KViteConfig{
-	Filename: "/tmp/kvitetest.db",
-	Table:    "kvitetest",
+	Table: "kvitetest",
 }
 
 var kviteStore metadata.Store

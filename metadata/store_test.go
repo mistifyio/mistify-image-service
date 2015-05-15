@@ -1,6 +1,7 @@
 package metadata_test
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -20,9 +21,33 @@ func (ms *MockStore) Put(i *metadata.Image) error                   { return nil
 func (ms *MockStore) Delete(s string) error                         { return nil }
 
 func TestMain(m *testing.M) {
+	code := 0
+	defer func() {
+		os.Exit(code)
+	}()
+
 	log.SetLevel(log.WarnLevel)
 
-	os.Exit(m.Run())
+	// Store-specific setup
+
+	// KVite
+	kviteFile, err := ioutil.TempFile("", "kvitetest.db")
+	if err != nil {
+		log.WithField("error", err).Fatal("failed to create kvite temp file")
+		return
+	}
+	kviteConfig.Filename = kviteFile.Name()
+	defer func() {
+		if err := os.RemoveAll(kviteConfig.Filename); err != nil {
+			log.WithFields(log.Fields{
+				"error":    err,
+				"filename": kviteConfig.Filename,
+			}).Error("could not clean up kvite file")
+		}
+	}()
+
+	// Run the tests
+	code = m.Run()
 }
 
 func TestList(t *testing.T) {
