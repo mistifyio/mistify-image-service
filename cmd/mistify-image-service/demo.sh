@@ -44,10 +44,6 @@ http () {
     OUTPUT=$(curl --fail -s -X $METHOD -H "$XIT" -H "$XIC" -H 'Content-Type: application/json' $URL "$@" | jq .)
     log "Result:"
     echo "$OUTPUT" | indent
-
-    #Unset headers
-    XIT=
-    XIC=
 }
 
 clean () {
@@ -64,9 +60,7 @@ header "LIST IMAGES"
 http GET images
 
 header "UPLOAD IMAGE"
-XIT="X-Image-Type: kvm"
-XIC="X-Image-Comment: uploaded image"
-http PUT images --data-binary "@$FILE"
+XIT="X-Image-Type: kvm" XIC="X-Image-Comment: uploaded image" http PUT images --data-binary "@$FILE"
 ID=$(echo "$OUTPUT" | jq -r .id)
 
 header "GET IMAGE INFO"
