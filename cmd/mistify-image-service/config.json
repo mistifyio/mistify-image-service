@@ -5,7 +5,7 @@
     },
     "metadataStoreType": "kvite",
     "metadataStoreConfig": {
-        "filename": "/tmp/images/.image.db",
+        "filename": "/tmp/images/image.db",
         "table": "images"
     }
 }
