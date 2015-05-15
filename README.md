@@ -76,13 +76,6 @@ func NewContext() (*Context, error)
 ```
 NewContext creates a new context from configuration
 
-#### func (*Context) NewFetcher
-
-```go
-func (ctx *Context) NewFetcher()
-```
-NewFetcher creates a new image fetcher for the context
-
 #### func (*Context) NewImageStore
 
 ```go

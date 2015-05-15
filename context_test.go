@@ -83,13 +83,6 @@ func TestContextNewMetadataStore(t *testing.T) {
 	assert.NotNil(t, ctx.MetadataStore)
 }
 
-func TestContextNewFetcher(t *testing.T) {
-	ctx := &imageservice.Context{}
-	ctx.NewFetcher()
-
-	assert.NotNil(t, ctx.Fetcher)
-}
-
 func TestNewContext(t *testing.T) {
 	context, err := imageservice.NewContext()
 	assert.NoError(t, err)

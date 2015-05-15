@@ -66,7 +66,7 @@ func NewContext() (*Context, error) {
 	}
 
 	// Image Fetcher
-	ctx.NewFetcher()
+	ctx.Fetcher = NewFetcher(ctx)
 
 	return ctx, nil
 }
@@ -89,9 +89,4 @@ func (ctx *Context) NewMetadataStore(storeType string) error {
 	}
 	ctx.MetadataStore = store
 	return nil
-}
-
-// NewFetcher creates a new image fetcher for the context
-func (ctx *Context) NewFetcher() {
-	ctx.Fetcher = NewFetcher(ctx)
 }
