@@ -76,17 +76,17 @@ func NewContext() (*Context, error)
 ```
 NewContext creates a new context from configuration
 
-#### func (*Context) NewImageStore
+#### func (*Context) InitImageStore
 
 ```go
-func (ctx *Context) NewImageStore(storeType string) error
+func (ctx *Context) InitImageStore(storeType string, configBytes []byte) error
 ```
 NewImageStore creates a new image store for the context
 
-#### func (*Context) NewMetadataStore
+#### func (*Context) InitMetadataStore
 
 ```go
-func (ctx *Context) NewMetadataStore(storeType string) error
+func (ctx *Context) InitMetadataStore(storeType string, configBytes []byte) error
 ```
 NewMetadataStore creates a new metadata store for the context
 

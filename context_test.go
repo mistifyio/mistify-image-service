@@ -1,6 +1,7 @@
 package imageservice_test
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -15,7 +16,7 @@ import (
 var ctx *imageservice.Context
 
 func TestMain(m *testing.M) {
-	log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.FatalLevel)
 
 	imgDir := "/tmp/test_image_service"
 	mdFile := "/tmp/test_image_service.db"
@@ -63,23 +64,27 @@ func cleanup(imgDir, mdFile string) error {
 	return nil
 }
 
-func TestContextNewImageStore(t *testing.T) {
+func TestContextInitImageStore(t *testing.T) {
 	ctx := &imageservice.Context{}
 
-	assert.Error(t, ctx.NewImageStore("asdfwqfas"))
+	assert.Error(t, ctx.InitImageStore("asdfwqfas", nil))
 	assert.Nil(t, ctx.ImageStore)
 
-	assert.NoError(t, ctx.NewImageStore("fs"))
+	imageStoreType := viper.GetString("imageStoreType")
+	imageStoreConfig, _ := json.Marshal(viper.Get("imageStoreConfig"))
+	assert.NoError(t, ctx.InitImageStore(imageStoreType, imageStoreConfig))
 	assert.NotNil(t, ctx.ImageStore)
 }
 
 func TestContextNewMetadataStore(t *testing.T) {
 	ctx := &imageservice.Context{}
 
-	assert.Error(t, ctx.NewMetadataStore("asdfwqfas"))
+	assert.Error(t, ctx.InitMetadataStore("asdfwqfas", nil))
 	assert.Nil(t, ctx.MetadataStore)
 
-	assert.NoError(t, ctx.NewMetadataStore("kvite"))
+	metadataStoreType := viper.GetString("metadataStoreType")
+	metadataStoreConfig, _ := json.Marshal(viper.Get("metadataStoreConfig"))
+	assert.NoError(t, ctx.InitMetadataStore(metadataStoreType, metadataStoreConfig))
 	assert.NotNil(t, ctx.MetadataStore)
 }
 
