@@ -1,44 +1,49 @@
 package main
 
 import (
-    flag "github.com/docker/docker/pkg/mflag"
-    "os"
-    "github.com/mistifyio/mistify-agent/log"
-    "github.com/mistifyio/mistify-image-service"
-    "strings"
-)
-
-const (
-    DEFAULT_CONFIG_FILE = "config.json"
+	log "github.com/Sirupsen/logrus"
+	"github.com/mistifyio/mistify-image-service"
+	logx "github.com/mistifyio/mistify-logrus-ext"
+	flag "github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 func main() {
-    var help bool
-    var configFile string
+	var configFile, logLevel string
 
-    flag.BoolVar(&help, []string{"h", "#help", "-help"}, false, "display help")
-    flag.StringVar(&configFile, []string{"c", "#config-file", "-config-file"}, DEFAULT_CONFIG_FILE, "configuration file")
+	flag.IntP("port", "a", 20000, "listen address")
+	flag.StringVarP(&logLevel, "log-level", "l", "warning", "log level: debug/info/warning/error/critical/fatal")
+	flag.StringVarP(&configFile, "config-file", "c", "", "config file")
+	flag.Parse()
 
-    flag.Parse()
+	if err := logx.DefaultSetup(logLevel); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"func":  "logx.DefaultSetup",
+			"level": logLevel,
+		}).Fatal("failed to set up logging")
+	}
 
-    if help {
-        flag.PrintDefaults()
-        os.Exit(0)
-    }
+	if configFile == "" {
+		log.Fatal("undefined config file")
+	}
 
-    config, err := imageservice.ConfigFromFile(configFile)
-    if nil != err {
-        log.Fatal(err)
-    }
+	viper.SetConfigFile(configFile)
+	_ = viper.BindPFlag("port", flag.Lookup("port"))
+	if err := viper.ReadInConfig(); err != nil {
+		log.WithField("error", err).Fatal("failed to load config")
+	}
 
-    context, err := imageservice.NewContext(config)
-    if nil != err {
-        log.Fatal(err)
-    }
+	context, err := imageservice.NewContext()
+	if nil != err {
+		log.Fatal("failed to create and initialize context")
+	}
 
-    err = imageservice.Run(context, strings.Join([]string{config.Address, config.Port}, ":"))
-    if nil != err {
-        log.Fatal(err)
-    }
+	log.WithFields(log.Fields{
+		"port": viper.GetInt("port"),
+	}).Info("running server")
 
+	if err := imageservice.Run(context, viper.GetInt("port")); err != nil {
+		log.WithField("error", err).Fatal("failed to run server")
+	}
 }

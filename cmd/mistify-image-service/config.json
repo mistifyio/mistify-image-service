@@ -1,0 +1,11 @@
+{
+    "imageStoreType": "fs",
+    "imageStoreConfig": {
+        "dir": "/tmp/images"
+    },
+    "metadataStoreType": "kvite",
+    "metadataStoreConfig": {
+        "filename": "/tmp/images/image.db",
+        "table": "images"
+    }
+}

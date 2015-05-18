@@ -1,83 +1,103 @@
 package imageservice
 
 import (
-    "github.com/mistifyio/mistify-image-service/images"
-    "github.com/mistifyio/mistify-image-service/images/riakcs"
+	"encoding/json"
+	"errors"
 
-    "github.com/mistifyio/mistify-image-service/metadata"
-    "github.com/mistifyio/mistify-image-service/metadata/riak"
-    
-    "fmt"
+	log "github.com/Sirupsen/logrus"
+	"github.com/mistifyio/mistify-image-service/images"
+	"github.com/mistifyio/mistify-image-service/metadata"
+	"github.com/spf13/viper"
 )
 
 type (
-    
-    // context is the core of everything
-    Context struct {
-        ImagesBackend images.ImageStore
-        MetadataBackend metadata.MetadataStore
+	// Context holds the initialized stores
+	Context struct {
+		ImageStore    images.Store
+		MetadataStore metadata.Store
+		Fetcher       *Fetcher
 	}
-    
 )
 
-const (
-    // imagestore backend types 
-    
-    // Riak-CS backend
-    IMAGE_STORE_RIAKCS = "riakcs"
-    
-    // Riak metadata backend
-    METADATA_STORE_RIAK = "riak"
-)
+// NewContext creates a new context from configuration
+func NewContext() (*Context, error) {
+	ctx := &Context{}
 
-// Create a new context from configuration
-func NewContext(config *Config) (*Context, error) {
-    // create context
-    ctx := &Context{}
-    
-    // create backends
-    err := ctx.createImageStore(config.ImageStoreType)
-    if nil != err {
-        return nil, err
-    }
-    err = ctx.createMetadataStore(config.MetadataStoreType)
-    if nil != err {
-        return nil, err
-    }
-    
-    // initialize the backends
-    err = ctx.ImagesBackend.Init(config.ImageStoreConfig)
-    if nil != err {
-        return nil, err
-    }
-    err = ctx.MetadataBackend.Init(config.MetadataStoreConfig)
-    if nil != err {
-        return nil, err
-    }
-    
-    return ctx, nil
+	// Image Storage
+	imageStoreType := viper.GetString("imageStoreType")
+	// json errors would have been caught by viper when loading the file
+	imageStoreConfig, _ := json.Marshal(viper.Get("imageStoreConfig"))
+	if err := ctx.InitImageStore(imageStoreType, imageStoreConfig); err != nil {
+		return nil, err
+	}
+
+	// Metadata Storage
+	metadataStoreType := viper.GetString("metadataStoreType")
+	// json errors would have been caught by viper when loading the file
+	metadataStoreConfig, _ := json.Marshal(viper.Get("metadataStoreConfig"))
+	if err := ctx.InitMetadataStore(metadataStoreType, metadataStoreConfig); err != nil {
+		log.WithFields(log.Fields{
+			"error":  err,
+			"type":   metadataStoreType,
+			"config": metadataStoreConfig,
+		}).Error("failed to initialize metadata store")
+		return nil, err
+	}
+
+	// Image Fetcher
+	ctx.Fetcher = NewFetcher(ctx)
+
+	return ctx, nil
 }
 
-// Create an imagestore backend instance by type
-func (c *Context) createImageStore(imageStoreType string) error {
-    switch imageStoreType {
-        case IMAGE_STORE_RIAKCS:
-            c.ImagesBackend = new(riakcs.RiakCS);
-        default:
-            return fmt.Errorf("Invalid image store backend type: %s", imageStoreType)
-    }
-    
-    return nil
+// NewImageStore creates a new image store for the context
+func (ctx *Context) InitImageStore(storeType string, configBytes []byte) error {
+	store := images.NewStore(storeType)
+	if store == nil {
+		err := errors.New("unknown image store type")
+		log.WithFields(log.Fields{
+			"error": err,
+			"type":  storeType,
+		}).Error("failed to create image store")
+		return err
+	}
+
+	if err := store.Init(configBytes); err != nil {
+		log.WithFields(log.Fields{
+			"error":  err,
+			"type":   storeType,
+			"config": string(configBytes),
+		}).Error("failed to initialize image store")
+		return err
+	}
+
+	ctx.ImageStore = store
+
+	return nil
 }
 
-// Create a metadata store backend by type
-func (c *Context) createMetadataStore(metadataStoreType string) error {
-    switch metadataStoreType {
-        case METADATA_STORE_RIAK:
-            c.MetadataBackend = new(riak.Riak);
-        default:
-            return fmt.Errorf("Invalid metadata store backend type: %s", metadataStoreType)
-    }
-    
-    return nil
+// NewMetadataStore creates a new metadata store for the context
+func (ctx *Context) InitMetadataStore(storeType string, configBytes []byte) error {
+	store := metadata.NewStore(storeType)
+	if store == nil {
+		err := errors.New("unknown metadata store type")
+		log.WithFields(log.Fields{
+			"error": err,
+			"type":  storeType,
+		}).Error("failed to create metadata store")
+		return err
+	}
+
+	if err := store.Init(configBytes); err != nil {
+		log.WithFields(log.Fields{
+			"error":  err,
+			"type":   storeType,
+			"config": string(configBytes),
+		}).Error("failed to initialize metadata store")
+		return err
+	}
+
+	ctx.MetadataStore = store
+
+	return nil
 }
