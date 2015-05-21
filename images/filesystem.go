@@ -120,6 +120,7 @@ func (fs *FS) Get(imageID string, out io.Writer) error {
 		}).Error("failed to open image")
 		return err
 	}
+	defer file.Close()
 
 	if _, err := io.Copy(out, file); err != nil {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
