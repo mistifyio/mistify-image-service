@@ -143,14 +143,14 @@ func downloadImageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if image.Status != metadata.StatusComplete {
-		http.Error(w, "incomplete", 404)
+		http.Error(w, "incomplete", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Length", strconv.FormatInt(image.Size, 10))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	if err := ctx.ImageStore.Get(image.ID, w); err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
