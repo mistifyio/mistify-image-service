@@ -40,7 +40,7 @@ http () {
     fi
 
     URL="http://$HOST:$PORT/$ENDPOINT"
-    log "$METHOD\t$URL" 
+    log "$METHOD\t$URL\t$@" 
     OUTPUT=$(curl --fail -s -X $METHOD -H "$XIT" -H "$XIC" -H 'Content-Type: application/json' $URL "$@" | jq .)
     log "Result:"
     echo "$OUTPUT" | indent
