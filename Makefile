@@ -1,5 +1,5 @@
 PREFIX := /usr
-SBIN_DIR=$(PREFIX)/sbin
+SBIN_DIR := $(PREFIX)/sbin
 CONF_DIR := /etc/mistify-image-service
 
 cmd/mistify-image-service/mistify-image-service: cmd/mistify-image-service/main.go
