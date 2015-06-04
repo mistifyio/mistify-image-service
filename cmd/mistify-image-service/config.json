@@ -3,9 +3,8 @@
     "imageStoreConfig": {
         "dir": "/tmp/images"
     },
-    "metadataStoreType": "kvite",
+    "metadataStoreType": "etcd",
     "metadataStoreConfig": {
-        "filename": "/tmp/images/image.db",
-        "table": "images"
+        "prefix": "/lochness"
     }
 }
