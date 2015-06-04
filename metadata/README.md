@@ -60,6 +60,88 @@ func Register(name string, newFunc func() Store)
 ```
 Register adds a new Store under a name
 
+#### type Etcd
+
+```go
+type Etcd struct {
+	Prefix string
+	Config *EtcdConfig
+}
+```
+
+Etcd is a metadata store using etcd
+
+#### func (*Etcd) Delete
+
+```go
+func (ec *Etcd) Delete(imageID string) error
+```
+Delete removs an image from etcd
+
+#### func (*Etcd) GetByID
+
+```go
+func (ec *Etcd) GetByID(imageID string) (*Image, error)
+```
+GetByID retrieves an image from etcd using the image id
+
+#### func (*Etcd) GetBySource
+
+```go
+func (ec *Etcd) GetBySource(imageSource string) (*Image, error)
+```
+GetBySource retrieves an image from etcd using the image source
+
+#### func (*Etcd) Init
+
+```go
+func (ec *Etcd) Init(configBytes []byte) error
+```
+Init parses the config and creates an etcd client
+
+#### func (*Etcd) List
+
+```go
+func (ec *Etcd) List(imageType string) ([]*Image, error)
+```
+List retrieves a list of images from etcd
+
+#### func (*Etcd) Put
+
+```go
+func (ec *Etcd) Put(image *Image) error
+```
+Put stores an image in etcd
+
+#### func (*Etcd) Shutdown
+
+```go
+func (ec *Etcd) Shutdown() error
+```
+Shutdown closes the etcd client connection
+
+#### type EtcdConfig
+
+```go
+type EtcdConfig struct {
+	Machines []string
+	Cert     string
+	Key      string
+	CaCert   string
+	Filepath string
+	Prefix   string
+}
+```
+
+EtcdConfig contains config options to set up an etcd client
+
+#### func (*EtcdConfig) Validate
+
+```go
+func (ec *EtcdConfig) Validate() error
+```
+Validate checks whether the config is valid and
+
 #### type Image
 
 ```go
