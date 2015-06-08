@@ -2,6 +2,7 @@ package imageservice
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -29,7 +30,7 @@ func listImagesHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	imageType := vars["imageType"]
 	if imageType != "" && !metadata.IsValidImageType(imageType) {
-		hr.JSON(http.StatusBadRequest, "invalid type")
+		hr.JSONError(http.StatusBadRequest, errors.New("invalid type"))
 		return
 	}
 
@@ -52,7 +53,7 @@ func receiveImageHandler(w http.ResponseWriter, r *http.Request) {
 
 	imageType := r.Header.Get("X-Image-Type")
 	if !metadata.IsValidImageType(imageType) {
-		hr.JSON(http.StatusBadRequest, "invalid X-Image-Type header")
+		hr.JSONError(http.StatusBadRequest, errors.New("invalid X-Image-Type header"))
 		return
 	}
 
@@ -76,18 +77,18 @@ func fetchImageHandler(w http.ResponseWriter, r *http.Request) {
 
 	image := &metadata.Image{}
 	if err := json.NewDecoder(r.Body).Decode(image); err != nil {
-		hr.JSON(http.StatusBadRequest, err.Error())
+		hr.JSONError(http.StatusBadRequest, err)
 		return
 	}
 	image.ID = metadata.NewID()
 
 	// Ensure sufficient information for fetching
 	if image.Source == "" {
-		hr.JSON(http.StatusBadRequest, "missing image source")
+		hr.JSONError(http.StatusBadRequest, errors.New("missing image source"))
 		return
 	}
 	if !metadata.IsValidImageType(image.Type) {
-		hr.JSON(http.StatusBadRequest, "invalid image type")
+		hr.JSONError(http.StatusBadRequest, errors.New("invalid image type"))
 		return
 	}
 
@@ -135,6 +136,7 @@ func deleteImageHandler(w http.ResponseWriter, r *http.Request) {
 
 // downloadImageHandler streams an image data
 func downloadImageHandler(w http.ResponseWriter, r *http.Request) {
+	hr := &HTTPResponse{w}
 	ctx := GetContext(r)
 
 	image := getImage(w, r)
@@ -143,7 +145,7 @@ func downloadImageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if image.Status != metadata.StatusComplete {
-		http.Error(w, "incomplete", http.StatusNotFound)
+		hr.JSONError(http.StatusNotFound, errors.New("incomplete image"))
 		return
 	}
 
@@ -167,7 +169,7 @@ func getImage(w http.ResponseWriter, r *http.Request) *metadata.Image {
 		return nil
 	}
 	if image == nil {
-		hr.JSON(http.StatusNotFound, nil)
+		hr.JSONError(http.StatusNotFound, errors.New("not found"))
 		return nil
 	}
 
