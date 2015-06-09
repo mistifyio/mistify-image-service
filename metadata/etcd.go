@@ -7,6 +7,7 @@ import (
 	"path"
 
 	log "github.com/Sirupsen/logrus"
+	etcderr "github.com/coreos/etcd/error"
 	"github.com/coreos/go-etcd/etcd"
 )
 
@@ -106,7 +107,7 @@ func (ec *Etcd) Init(configBytes []byte) error {
 
 	if _, err := ec.client.CreateDir(ec.Prefix, 0); err != nil {
 		etcdErr := err.(*etcd.EtcdError)
-		if etcdErr.ErrorCode != 105 {
+		if etcdErr.ErrorCode != etcderr.EcodeNodeExist {
 			log.WithFields(etcdLogFields).WithFields(log.Fields{
 				"error": err,
 				"key":   ec.Prefix,
