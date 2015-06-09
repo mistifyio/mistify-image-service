@@ -16,7 +16,7 @@ type (
 	Etcd struct {
 		client *etcd.Client
 		prefix string
-		Config *EtcdConfig
+		config *EtcdConfig
 	}
 
 	// EtcdConfig contains config options to set up an etcd client
@@ -78,28 +78,28 @@ func (ec *Etcd) Init(configBytes []byte) error {
 		return err
 	}
 
-	ec.Config = config
+	ec.config = config
 	log.WithFields(etcdLogFields).WithFields(log.Fields{
-		"config": ec.Config,
+		"config": ec.config,
 	}).Info("config loaded")
 
-	ec.prefix = path.Join(ec.Config.Prefix, "images")
+	ec.prefix = path.Join(ec.config.Prefix, "images")
 
 	// Create the etcd client
 	var client *etcd.Client
 	var err error
-	switch ec.Config.clientNewType {
+	switch ec.config.clientNewType {
 	case "file":
-		client, err = etcd.NewClientFromFile(ec.Config.Filepath)
+		client, err = etcd.NewClientFromFile(ec.config.Filepath)
 	case "tls":
-		client, err = etcd.NewTLSClient(ec.Config.Machines, ec.Config.Cert, ec.Config.Key, ec.Config.CaCert)
+		client, err = etcd.NewTLSClient(ec.config.Machines, ec.config.Cert, ec.config.Key, ec.config.CaCert)
 	default:
-		client = etcd.NewClient(ec.Config.Machines)
+		client = etcd.NewClient(ec.config.Machines)
 	}
 	if err != nil {
 		log.WithFields(etcdLogFields).WithFields(log.Fields{
 			"error":  err,
-			"config": ec.Config,
+			"config": ec.config,
 		}).Error("failed to create client")
 		return err
 	}
