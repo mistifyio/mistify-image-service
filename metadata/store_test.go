@@ -25,7 +25,7 @@ func TestMain(m *testing.M) {
 		os.Exit(code)
 	}()
 
-	log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.FatalLevel)
 
 	// Store-specific setup
 

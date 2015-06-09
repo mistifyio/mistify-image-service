@@ -50,7 +50,14 @@ func (ec *etcdConfig) Validate() error {
 	tlsMissing := ec.Cert == "" || ec.Key == "" || ec.CaCert == ""
 	if tlsPresent {
 		if tlsMissing {
-			return errors.New("incomplete tls config")
+			err := errors.New("incomplete tls config")
+			log.WithFields(etcdLogFields).WithFields(log.Fields{
+				"error":  err,
+				"cert":   ec.Cert,
+				"key":    ec.Key,
+				"caCert": ec.CaCert,
+			}).Error(err)
+			return err
 		}
 		ec.clientNewType = "tls"
 	}
@@ -71,10 +78,6 @@ func (es *etcdStore) Init(configBytes []byte) error {
 	}
 
 	if err := config.Validate(); err != nil {
-		log.WithFields(etcdLogFields).WithFields(log.Fields{
-			"error": err,
-		}).Error("failed config validation")
-
 		return err
 	}
 
