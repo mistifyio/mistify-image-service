@@ -1,53 +1,52 @@
-package metadata_test
+package metadata
 
 import (
 	"testing"
 	"time"
 
-	"github.com/mistifyio/mistify-image-service/metadata"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewID(t *testing.T) {
-	id := metadata.NewID()
+	id := NewID()
 	assert.NotEmpty(t, id)
 }
 
 func TestIsValidImageType(t *testing.T) {
-	for imageType := range metadata.ValidImageTypes {
-		assert.True(t, metadata.IsValidImageType(imageType))
+	for imageType := range ValidImageTypes {
+		assert.True(t, IsValidImageType(imageType))
 	}
-	assert.False(t, metadata.IsValidImageType("foobar"))
+	assert.False(t, IsValidImageType("foobar"))
 }
 
-func newImage() *metadata.Image {
+func newTestImage() *Image {
 	registerMockStore()
-	image := &metadata.Image{
-		ID:    metadata.NewID(),
-		Store: metadata.NewStore("mock"),
+	image := &Image{
+		ID:    NewID(),
+		Store: NewStore("mock"),
 	}
 	return image
 }
 
 func TestSetPending(t *testing.T) {
-	image := newImage()
+	image := newTestImage()
 
 	assert.NoError(t, image.SetPending())
-	assert.Equal(t, metadata.StatusPending, image.Status)
+	assert.Equal(t, StatusPending, image.Status)
 }
 
 func TestSetDownloading(t *testing.T) {
-	image := newImage()
+	image := newTestImage()
 	size := int64(10000)
 
 	assert.NoError(t, image.SetDownloading(size))
-	assert.Equal(t, metadata.StatusDownloading, image.Status)
+	assert.Equal(t, StatusDownloading, image.Status)
 	assert.WithinDuration(t, image.DownloadStart, time.Now(), 1*time.Minute)
 	assert.Equal(t, size, image.ExpectedSize)
 }
 
 func TestUpdateSize(t *testing.T) {
-	image := newImage()
+	image := newTestImage()
 	size := int64(10000)
 
 	for i := 0; i < 5; i++ {
@@ -58,9 +57,9 @@ func TestUpdateSize(t *testing.T) {
 }
 
 func TestSetFinished(t *testing.T) {
-	image := newImage()
+	image := newTestImage()
 
 	assert.Nil(t, image.SetFinished(nil))
-	assert.Equal(t, metadata.StatusComplete, image.Status)
+	assert.Equal(t, StatusComplete, image.Status)
 	assert.WithinDuration(t, image.DownloadEnd, time.Now(), 1*time.Minute)
 }

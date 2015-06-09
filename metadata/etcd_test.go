@@ -1,76 +1,75 @@
-package metadata_test
+package metadata
 
 import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mistifyio/mistify-image-service/metadata"
 	"github.com/stretchr/testify/assert"
 )
 
-var etcdConfig = &metadata.EtcdConfig{
+var testEtcdConfig = &EtcdConfig{
 	Prefix: "etcdTest",
 }
 
-var etcdStore metadata.Store
-var etcdImage *metadata.Image
+var testEtcdStore Store
+var testEtcdImage *Image
 
 func TestEtcdConfigValidate(t *testing.T) {
-	var ec *metadata.EtcdConfig
+	var ec *EtcdConfig
 
-	ec = &metadata.EtcdConfig{}
+	ec = &EtcdConfig{}
 	assert.NoError(t, ec.Validate())
 
-	ec = &metadata.EtcdConfig{
+	ec = &EtcdConfig{
 		Filepath: "/foo",
 	}
 	assert.NoError(t, ec.Validate())
 
-	ec = &metadata.EtcdConfig{
+	ec = &EtcdConfig{
 		Cert: "foobar",
 	}
 	assert.Error(t, ec.Validate())
 
-	ec = &metadata.EtcdConfig{
+	ec = &EtcdConfig{
 		Cert:   "foobar",
 		Key:    "foobar",
 		CaCert: "foobar",
 	}
 	assert.NoError(t, ec.Validate())
 
-	assert.NoError(t, etcdConfig.Validate())
+	assert.NoError(t, testEtcdConfig.Validate())
 }
 
 func TestEtcdInit(t *testing.T) {
-	ec := metadata.NewStore("etcd")
-	configBytes, _ := json.Marshal(etcdConfig)
+	ec := NewStore("etcd")
+	configBytes, _ := json.Marshal(testEtcdConfig)
 	assert.NoError(t, ec.Init(configBytes))
 
-	etcdStore = ec
+	testEtcdStore = ec
 }
 
 func TestEtcdPut(t *testing.T) {
-	assert.NoError(t, etcdStore.Put(etcdImage))
+	assert.NoError(t, testEtcdStore.Put(testEtcdImage))
 }
 
 func TestEtcdGetBySource(t *testing.T) {
-	image, err := etcdStore.GetBySource(etcdImage.Source)
+	image, err := testEtcdStore.GetBySource(testEtcdImage.Source)
 	assert.NoError(t, err)
-	assert.Equal(t, etcdImage.ID, image.ID)
+	assert.Equal(t, testEtcdImage.ID, image.ID)
 }
 
 func TestEtcdGetByID(t *testing.T) {
-	image, err := etcdStore.GetByID(etcdImage.ID)
+	image, err := testEtcdStore.GetByID(testEtcdImage.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, etcdImage.ID, image.ID)
+	assert.Equal(t, testEtcdImage.ID, image.ID)
 }
 
 func TestEtcdList(t *testing.T) {
-	images, err := etcdStore.List("")
+	images, err := testEtcdStore.List("")
 	assert.NoError(t, err)
 	var found bool
 	for _, image := range images {
-		if image.ID == etcdImage.ID {
+		if image.ID == testEtcdImage.ID {
 			found = true
 			break
 		}
@@ -79,16 +78,16 @@ func TestEtcdList(t *testing.T) {
 }
 
 func TestEtcdDelete(t *testing.T) {
-	assert.NoError(t, etcdStore.Delete(etcdImage.ID))
+	assert.NoError(t, testEtcdStore.Delete(testEtcdImage.ID))
 }
 
 func TestEtcdShutdown(t *testing.T) {
-	assert.NoError(t, etcdStore.Shutdown())
+	assert.NoError(t, testEtcdStore.Shutdown())
 }
 
 func init() {
-	etcdImage = &metadata.Image{
-		ID:     metadata.NewID(),
+	testEtcdImage = &Image{
+		ID:     NewID(),
 		Type:   "kvm",
 		Source: "http://localhost",
 	}
