@@ -37,7 +37,8 @@ var etcdLogFields = log.Fields{
 	"store": "etcd",
 }
 
-// Validate checks whether the config is valid and
+// Validate checks whether the config is valid and determines what method
+// is required to create the new client based on what is provided
 func (ec *EtcdConfig) Validate() error {
 	if ec.Filepath != "" {
 		ec.clientNewType = "file"
