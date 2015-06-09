@@ -16,11 +16,11 @@ type (
 	Etcd struct {
 		client *etcd.Client
 		prefix string
-		config *EtcdConfig
+		config *etcdConfig
 	}
 
-	// EtcdConfig contains config options to set up an etcd client
-	EtcdConfig struct {
+	// etcdConfig contains config options to set up an etcd client
+	etcdConfig struct {
 		Machines      []string
 		Cert          string
 		Key           string
@@ -39,7 +39,7 @@ var etcdLogFields = log.Fields{
 
 // Validate checks whether the config is valid and determines what method
 // is required to create the new client based on what is provided
-func (ec *EtcdConfig) Validate() error {
+func (ec *etcdConfig) Validate() error {
 	if ec.Filepath != "" {
 		ec.clientNewType = "file"
 		return nil
@@ -59,7 +59,7 @@ func (ec *EtcdConfig) Validate() error {
 
 // Init parses the config and creates an etcd client
 func (ec *Etcd) Init(configBytes []byte) error {
-	config := &EtcdConfig{}
+	config := &etcdConfig{}
 
 	// Parse the config json
 	if err := json.Unmarshal(configBytes, config); err != nil {

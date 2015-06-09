@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testEtcdConfig = &EtcdConfig{
+var testetcdConfig = &etcdConfig{
 	Prefix: "etcdTest",
 }
 
@@ -15,34 +15,34 @@ var testEtcdStore Store
 var testEtcdImage *Image
 
 func TestEtcdConfigValidate(t *testing.T) {
-	var ec *EtcdConfig
+	var ec *etcdConfig
 
-	ec = &EtcdConfig{}
+	ec = &etcdConfig{}
 	assert.NoError(t, ec.Validate())
 
-	ec = &EtcdConfig{
+	ec = &etcdConfig{
 		Filepath: "/foo",
 	}
 	assert.NoError(t, ec.Validate())
 
-	ec = &EtcdConfig{
+	ec = &etcdConfig{
 		Cert: "foobar",
 	}
 	assert.Error(t, ec.Validate())
 
-	ec = &EtcdConfig{
+	ec = &etcdConfig{
 		Cert:   "foobar",
 		Key:    "foobar",
 		CaCert: "foobar",
 	}
 	assert.NoError(t, ec.Validate())
 
-	assert.NoError(t, testEtcdConfig.Validate())
+	assert.NoError(t, testetcdConfig.Validate())
 }
 
 func TestEtcdInit(t *testing.T) {
 	ec := NewStore("etcd")
-	configBytes, _ := json.Marshal(testEtcdConfig)
+	configBytes, _ := json.Marshal(testetcdConfig)
 	assert.NoError(t, ec.Init(configBytes))
 
 	testEtcdStore = ec
