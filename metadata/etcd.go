@@ -15,7 +15,7 @@ type (
 	// Etcd is a metadata store using etcd
 	Etcd struct {
 		client *etcd.Client
-		Prefix string
+		prefix string
 		Config *EtcdConfig
 	}
 
@@ -83,7 +83,7 @@ func (ec *Etcd) Init(configBytes []byte) error {
 		"config": ec.Config,
 	}).Info("config loaded")
 
-	ec.Prefix = path.Join(ec.Config.Prefix, "images")
+	ec.prefix = path.Join(ec.Config.Prefix, "images")
 
 	// Create the etcd client
 	var client *etcd.Client
@@ -106,12 +106,12 @@ func (ec *Etcd) Init(configBytes []byte) error {
 
 	ec.client = client
 
-	if _, err := ec.client.CreateDir(ec.Prefix, 0); err != nil {
+	if _, err := ec.client.CreateDir(ec.prefix, 0); err != nil {
 		etcdErr := err.(*etcd.EtcdError)
 		if etcdErr.ErrorCode != etcderr.EcodeNodeExist {
 			log.WithFields(etcdLogFields).WithFields(log.Fields{
 				"error": err,
-				"key":   ec.Prefix,
+				"key":   ec.prefix,
 			}).Error("failed to create images dir")
 			return err
 		}
@@ -130,11 +130,11 @@ func (ec *Etcd) List(imageType string) ([]*Image, error) {
 	var images []*Image
 
 	// Look up the prefix to get a list of imageIDs
-	resp, err := ec.client.Get(ec.Prefix, false, false)
+	resp, err := ec.client.Get(ec.prefix, false, false)
 	if err != nil {
 		log.WithFields(etcdLogFields).WithFields(log.Fields{
 			"error": err,
-			"key":   ec.Prefix,
+			"key":   ec.prefix,
 		}).Error("failed to look up images dir")
 		return nil, err
 	}
@@ -184,11 +184,11 @@ func (ec *Etcd) GetByID(imageID string) (*Image, error) {
 // GetBySource retrieves an image from etcd using the image source
 func (ec *Etcd) GetBySource(imageSource string) (*Image, error) {
 	// Look up the prefix to get a list of imageIDs
-	resp, err := ec.client.Get(ec.Prefix, false, false)
+	resp, err := ec.client.Get(ec.prefix, false, false)
 	if err != nil {
 		log.WithFields(etcdLogFields).WithFields(log.Fields{
 			"error": err,
-			"key":   ec.Prefix,
+			"key":   ec.prefix,
 		}).Error("failed to look up images dir")
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func (ec *Etcd) Put(image *Image) error {
 
 // Delete removs an image from etcd
 func (ec *Etcd) Delete(imageID string) error {
-	key := path.Join(ec.Prefix, imageID)
+	key := path.Join(ec.prefix, imageID)
 	if _, err := ec.client.Delete(key, true); err != nil {
 		log.WithFields(etcdLogFields).WithFields(log.Fields{
 			"error": err,
@@ -247,7 +247,7 @@ func (ec *Etcd) Delete(imageID string) error {
 }
 
 func (ec *Etcd) metadataKey(imageID string) string {
-	return path.Join(ec.Prefix, imageID, "metadata")
+	return path.Join(ec.prefix, imageID, "metadata")
 }
 
 func init() {
