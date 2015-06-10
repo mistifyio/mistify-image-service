@@ -1,4 +1,4 @@
-package metadata_test
+package metadata
 
 import (
 	"io/ioutil"
@@ -6,19 +6,18 @@ import (
 	"testing"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/mistifyio/mistify-image-service/metadata"
 	"github.com/stretchr/testify/assert"
 )
 
 type MockStore struct{}
 
-func (ms *MockStore) Init(b []byte) error                           { return nil }
-func (ms *MockStore) Shutdown() error                               { return nil }
-func (ms *MockStore) List(s string) ([]*metadata.Image, error)      { return []*metadata.Image{}, nil }
-func (ms *MockStore) GetByID(s string) (*metadata.Image, error)     { return &metadata.Image{}, nil }
-func (ms *MockStore) GetBySource(s string) (*metadata.Image, error) { return &metadata.Image{}, nil }
-func (ms *MockStore) Put(i *metadata.Image) error                   { return nil }
-func (ms *MockStore) Delete(s string) error                         { return nil }
+func (ms *MockStore) Init(b []byte) error                  { return nil }
+func (ms *MockStore) Shutdown() error                      { return nil }
+func (ms *MockStore) List(s string) ([]*Image, error)      { return []*Image{}, nil }
+func (ms *MockStore) GetByID(s string) (*Image, error)     { return &Image{}, nil }
+func (ms *MockStore) GetBySource(s string) (*Image, error) { return &Image{}, nil }
+func (ms *MockStore) Put(i *Image) error                   { return nil }
+func (ms *MockStore) Delete(s string) error                { return nil }
 
 func TestMain(m *testing.M) {
 	code := 0
@@ -26,22 +25,22 @@ func TestMain(m *testing.M) {
 		os.Exit(code)
 	}()
 
-	log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.FatalLevel)
 
 	// Store-specific setup
 
 	// KVite
-	kviteFile, err := ioutil.TempFile("", "kvitetest.db")
+	testKviteFile, err := ioutil.TempFile("", "kvitetest.db")
 	if err != nil {
 		log.WithField("error", err).Fatal("failed to create kvite temp file")
 		return
 	}
-	kviteConfig.Filename = kviteFile.Name()
+	testKviteConfig.Filename = testKviteFile.Name()
 	defer func() {
-		if err := os.RemoveAll(kviteConfig.Filename); err != nil {
+		if err := os.RemoveAll(testKviteConfig.Filename); err != nil {
 			log.WithFields(log.Fields{
 				"error":    err,
-				"filename": kviteConfig.Filename,
+				"filename": testKviteConfig.Filename,
 			}).Error("could not clean up kvite file")
 		}
 	}()
@@ -51,28 +50,28 @@ func TestMain(m *testing.M) {
 }
 
 func TestList(t *testing.T) {
-	list := metadata.List()
+	list := List()
 	assert.NotNil(t, list)
 }
 
 func TestNewStore(t *testing.T) {
-	list := metadata.List()
+	list := List()
 	if len(list) == 0 {
 		return
 	}
 
-	assert.NotNil(t, metadata.NewStore(list[0]))
-	assert.Nil(t, metadata.NewStore("qweryasdf"))
+	assert.NotNil(t, NewStore(list[0]))
+	assert.Nil(t, NewStore("qweryasdf"))
 }
 
 func TestRegister(t *testing.T) {
 	registerMockStore()
 
-	assert.NotNil(t, metadata.NewStore("mock"))
+	assert.NotNil(t, NewStore("mock"))
 }
 
 func registerMockStore() {
-	metadata.Register("mock", func() metadata.Store {
+	Register("mock", func() Store {
 		return &MockStore{}
 	})
 }

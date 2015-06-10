@@ -1,69 +1,68 @@
-package metadata_test
+package metadata
 
 import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mistifyio/mistify-image-service/metadata"
 	"github.com/stretchr/testify/assert"
 )
 
-var kviteConfig = &metadata.KViteConfig{
+var testKviteConfig = &KViteConfig{
 	Table: "kvitetest",
 }
 
-var kviteStore metadata.Store
-var kviteImage *metadata.Image
+var testKviteStore Store
+var testKviteImage *Image
 
 func TestKViteConfigValidate(t *testing.T) {
-	var kvc *metadata.KViteConfig
+	var kvc *KViteConfig
 
-	kvc = &metadata.KViteConfig{}
+	kvc = &KViteConfig{}
 	assert.Error(t, kvc.Validate())
 
-	kvc = &metadata.KViteConfig{
+	kvc = &KViteConfig{
 		Filename: "/foo",
 	}
 	assert.Error(t, kvc.Validate())
 
-	kvc = &metadata.KViteConfig{
+	kvc = &KViteConfig{
 		Table: "foobar",
 	}
 	assert.Error(t, kvc.Validate())
 
-	assert.NoError(t, kviteConfig.Validate())
+	assert.NoError(t, testKviteConfig.Validate())
 }
 
 func TestKViteInit(t *testing.T) {
-	kv := metadata.NewStore("kvite")
-	configBytes, _ := json.Marshal(kviteConfig)
+	kv := NewStore("kvite")
+	configBytes, _ := json.Marshal(testKviteConfig)
 	assert.NoError(t, kv.Init(configBytes))
 
-	kviteStore = kv
+	testKviteStore = kv
 }
 
 func TestKVitePut(t *testing.T) {
-	assert.NoError(t, kviteStore.Put(kviteImage))
+	assert.NoError(t, testKviteStore.Put(testKviteImage))
 }
 
 func TestKViteGetByID(t *testing.T) {
-	image, err := kviteStore.GetByID(kviteImage.ID)
+	image, err := testKviteStore.GetByID(testKviteImage.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, kviteImage.ID, image.ID)
+	assert.Equal(t, testKviteImage.ID, image.ID)
 }
 
 func TestKViteGetBySource(t *testing.T) {
-	image, err := kviteStore.GetBySource(kviteImage.Source)
+	image, err := testKviteStore.GetBySource(testKviteImage.Source)
 	assert.NoError(t, err)
-	assert.Equal(t, kviteImage.ID, image.ID)
+	assert.Equal(t, testKviteImage.ID, image.ID)
 }
 
 func TestKViteList(t *testing.T) {
-	images, err := kviteStore.List("")
+	images, err := testKviteStore.List("")
 	assert.NoError(t, err)
 	var found bool
 	for _, image := range images {
-		if image.ID == kviteImage.ID {
+		if image.ID == testKviteImage.ID {
 			found = true
 			break
 		}
@@ -72,16 +71,16 @@ func TestKViteList(t *testing.T) {
 }
 
 func TestKViteDelete(t *testing.T) {
-	assert.NoError(t, kviteStore.Delete(kviteImage.ID))
+	assert.NoError(t, testKviteStore.Delete(testKviteImage.ID))
 }
 
 func TestKViteShutdown(t *testing.T) {
-	assert.NoError(t, kviteStore.Shutdown())
+	assert.NoError(t, testKviteStore.Shutdown())
 }
 
 func init() {
-	kviteImage = &metadata.Image{
-		ID:     metadata.NewID(),
+	testKviteImage = &Image{
+		ID:     NewID(),
 		Type:   "kvm",
 		Source: "http://localhost",
 	}
