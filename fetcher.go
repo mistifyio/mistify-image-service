@@ -64,6 +64,13 @@ func (fetcher *Fetcher) fetchImage(image *metadata.Image) {
 
 	// Start the download
 	resp, err := http.Get(image.Source)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"image": image,
+		}).Error(err)
+		return
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
