@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/mistify-image-service/metadata"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +30,9 @@ func TestFetcherReceive(t *testing.T) {
 
 func TestFetcherFetch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(mockImageData)
+		if _, err := w.Write(mockImageData); err != nil {
+			log.WithField("error", err).Error("Failed to write mock image data to response")
+		}
 	}))
 	defer ts.Close()
 

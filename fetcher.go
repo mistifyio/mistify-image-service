@@ -8,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/mistify-image-service/metadata"
+	logx "github.com/mistifyio/mistify-logrus-ext"
 )
 
 type (
@@ -71,7 +72,7 @@ func (fetcher *Fetcher) fetchImage(image *metadata.Image) {
 		}).Error(err)
 		return
 	}
-	defer resp.Body.Close()
+	defer logx.LogReturnedErr(resp.Body.Close, nil, "failed to close response body")
 
 	if resp.StatusCode != http.StatusOK {
 		err = errors.New("unexpected response status")
@@ -88,7 +89,7 @@ func (fetcher *Fetcher) fetchImage(image *metadata.Image) {
 
 // Receive adds and saves an image synchronously from the request body
 func (fetcher *Fetcher) Receive(r *http.Request) (*metadata.Image, error) {
-	defer r.Body.Close()
+	defer logx.LogReturnedErr(r.Body.Close, nil, "failed to close response body")
 
 	// Metadata preparation and initial save
 	image := &metadata.Image{
