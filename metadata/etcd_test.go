@@ -42,6 +42,18 @@ func TestEtcdConfigValidate(t *testing.T) {
 
 func TestEtcdInit(t *testing.T) {
 	ec := NewStore("etcd")
+	assert.Error(t, ec.Init([]byte("not actually json")))
+
+	ec = NewStore("etcd")
+	assert.Error(t, ec.Init([]byte(`{"cert":"blah"}`)))
+
+	ec = NewStore("etcd")
+	assert.Error(t, ec.Init([]byte(`{"filepath":"/dev/null/foo"}`)))
+
+	ec = NewStore("etcd")
+	assert.Error(t, ec.Init([]byte(`{"cert":"/dev/null/foo", "key":"asdf", "cacert":"asdf"}`)))
+
+	ec = NewStore("etcd")
 	configBytes, _ := json.Marshal(testetcdConfig)
 	assert.NoError(t, ec.Init(configBytes))
 
@@ -56,12 +68,18 @@ func TestEtcdGetBySource(t *testing.T) {
 	image, err := testEtcdStore.GetBySource(testEtcdImage.Source)
 	assert.NoError(t, err)
 	assert.Equal(t, testEtcdImage.ID, image.ID)
+
+	image, err = testEtcdStore.GetBySource("foobar")
+	assert.Nil(t, image)
 }
 
 func TestEtcdGetByID(t *testing.T) {
 	image, err := testEtcdStore.GetByID(testEtcdImage.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, testEtcdImage.ID, image.ID)
+
+	image, err = testEtcdStore.GetByID("foobar")
+	assert.Nil(t, image)
 }
 
 func TestEtcdList(t *testing.T) {
