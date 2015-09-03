@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testetcdConfig = &etcdConfig{
+var testEtcdConfig = &etcdConfig{
 	Prefix: "etcdTest",
 }
 
@@ -37,7 +37,7 @@ func TestEtcdConfigValidate(t *testing.T) {
 	}
 	assert.NoError(t, ec.Validate())
 
-	assert.NoError(t, testetcdConfig.Validate())
+	assert.NoError(t, testEtcdConfig.Validate())
 }
 
 func TestEtcdInit(t *testing.T) {
@@ -54,10 +54,13 @@ func TestEtcdInit(t *testing.T) {
 	assert.Error(t, ec.Init([]byte(`{"cert":"/dev/null/foo", "key":"asdf", "cacert":"asdf"}`)))
 
 	ec = NewStore("etcd")
-	configBytes, _ := json.Marshal(testetcdConfig)
+	configBytes, _ := json.Marshal(testEtcdConfig)
 	assert.NoError(t, ec.Init(configBytes))
 
 	testEtcdStore = ec
+
+	ec = NewStore("etcd")
+	assert.NoError(t, ec.Init(configBytes))
 }
 
 func TestEtcdPut(t *testing.T) {
@@ -97,6 +100,7 @@ func TestEtcdList(t *testing.T) {
 
 func TestEtcdDelete(t *testing.T) {
 	assert.NoError(t, testEtcdStore.Delete(testEtcdImage.ID))
+	assert.Error(t, testEtcdStore.Delete(testEtcdImage.ID))
 }
 
 func TestEtcdShutdown(t *testing.T) {
