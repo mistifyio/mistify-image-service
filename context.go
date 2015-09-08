@@ -50,7 +50,7 @@ func NewContext() (*Context, error) {
 	return ctx, nil
 }
 
-// NewImageStore creates a new image store for the context
+// InitImageStore creates a new image store for the context
 func (ctx *Context) InitImageStore(storeType string, configBytes []byte) error {
 	store := images.NewStore(storeType)
 	if store == nil {
@@ -76,7 +76,7 @@ func (ctx *Context) InitImageStore(storeType string, configBytes []byte) error {
 	return nil
 }
 
-// NewMetadataStore creates a new metadata store for the context
+// InitMetadataStore creates a new metadata store for the context
 func (ctx *Context) InitMetadataStore(storeType string, configBytes []byte) error {
 	store := metadata.NewStore(storeType)
 	if store == nil {

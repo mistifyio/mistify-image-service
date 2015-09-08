@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
+	logx "github.com/mistifyio/mistify-logrus-ext"
 )
 
 type (
@@ -120,7 +121,10 @@ func (fs *FS) Get(imageID string, out io.Writer) error {
 		}).Error("failed to open image")
 		return err
 	}
-	defer file.Close()
+	defer logx.LogReturnedErr(file.Close, log.Fields{
+		"imageID":  imageID,
+		"filepath": filepath,
+	}, "failed to close image file")
 
 	if _, err := io.Copy(out, file); err != nil {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
