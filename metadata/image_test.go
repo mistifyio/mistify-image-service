@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -61,5 +62,11 @@ func TestSetFinished(t *testing.T) {
 
 	assert.Nil(t, image.SetFinished(nil))
 	assert.Equal(t, StatusComplete, image.Status)
+	assert.WithinDuration(t, image.DownloadEnd, time.Now(), 1*time.Minute)
+
+	image = newTestImage()
+	imgErr := errors.New("An Error")
+	assert.Nil(t, image.SetFinished(imgErr))
+	assert.Equal(t, StatusError, image.Status)
 	assert.WithinDuration(t, image.DownloadEnd, time.Now(), 1*time.Minute)
 }

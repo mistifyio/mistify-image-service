@@ -35,6 +35,15 @@ func TestKViteConfigValidate(t *testing.T) {
 
 func TestKViteInit(t *testing.T) {
 	kv := NewStore("kvite")
+	assert.Error(t, kv.Init([]byte("not actually json")))
+
+	kv = NewStore("kvite")
+	assert.Error(t, kv.Init([]byte(`{"invalid":"config"}`)))
+
+	kv = NewStore("kvite")
+	assert.Error(t, kv.Init([]byte(`{"filename":"/dev/null/foo","table":"bar"}`)))
+
+	kv = NewStore("kvite")
 	configBytes, _ := json.Marshal(testKviteConfig)
 	assert.NoError(t, kv.Init(configBytes))
 
@@ -49,12 +58,20 @@ func TestKViteGetByID(t *testing.T) {
 	image, err := testKviteStore.GetByID(testKviteImage.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, testKviteImage.ID, image.ID)
+
+	image, err = testKviteStore.GetByID("asdf")
+	assert.NoError(t, err)
+	assert.Nil(t, image)
 }
 
 func TestKViteGetBySource(t *testing.T) {
 	image, err := testKviteStore.GetBySource(testKviteImage.Source)
 	assert.NoError(t, err)
 	assert.Equal(t, testKviteImage.ID, image.ID)
+
+	image, err = testKviteStore.GetBySource("asdf")
+	assert.NoError(t, err)
+	assert.Nil(t, image)
 }
 
 func TestKViteList(t *testing.T) {

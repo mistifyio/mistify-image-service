@@ -45,6 +45,20 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
+	// Etcd
+	defer func() {
+		es, ok := testEtcdStore.(*etcdStore)
+		if !ok {
+			return
+		}
+		if _, err := es.client.Delete(testEtcdConfig.Prefix, true); err != nil {
+			log.WithFields(log.Fields{
+				"error":  err,
+				"prefix": testEtcdConfig.Prefix,
+			}).Error("could not clean up etcd prefix")
+		}
+	}()
+
 	// Run the tests
 	code = m.Run()
 }
