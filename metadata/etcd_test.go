@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/mistifyio/mistify-image-service/metadata"
 	"github.com/pborman/uuid"
@@ -12,32 +11,30 @@ import (
 )
 
 type EtcdTestSuite struct {
-	suite.Suite
+	StoreTestSuite
 	EtcdConfig *metadata.EtcdConfig
 	// EtcdClient is for post-test cleanup of etcd
 	EtcdClient *etcd.Client
-	Store      metadata.Store
-	Image      *metadata.Image
 }
 
 func (s *EtcdTestSuite) SetupSuite() {
-	s.Image = &metadata.Image{
-		ID:     metadata.NewID(),
-		Type:   "kvm",
-		Source: "http://localhost",
-	}
-
+	// Etcd specific suite setup
 	s.EtcdClient = etcd.NewClient(nil)
+
+	// General store suite setup
+	s.StoreTestSuite.SetupSuite()
 }
 
 func (s *EtcdTestSuite) SetupTest() {
-	// Configure and initialize a new etcd Store
+	// Etcd specific test setup
 	s.EtcdConfig = &metadata.EtcdConfig{
 		Prefix: "etcdTest-" + uuid.New(),
 	}
-	s.Store = metadata.NewStore("etcd")
 	configBytes, _ := json.Marshal(s.EtcdConfig)
-	_ = s.Store.Init(configBytes)
+	s.StoreConfig = configBytes
+
+	// General store test setup
+	s.StoreTestSuite.SetupTest()
 }
 
 func (s *EtcdTestSuite) TearDownTest() {
@@ -47,10 +44,12 @@ func (s *EtcdTestSuite) TearDownTest() {
 }
 
 func TestEtcdTestSuite(t *testing.T) {
-	suite.Run(t, new(EtcdTestSuite))
+	s := new(EtcdTestSuite)
+	s.StoreName = "etcd"
+	suite.Run(t, s)
 }
 
-func (s *EtcdTestSuite) TestEtcdConfigValidate() {
+func (s *EtcdTestSuite) TestConfigValidate() {
 	tests := []struct {
 		description string
 		config      *metadata.EtcdConfig
@@ -85,9 +84,7 @@ func (s *EtcdTestSuite) TestEtcdConfigValidate() {
 	}
 }
 
-func (s *EtcdTestSuite) TestEtcdInit() {
-	goodConfigBytes, _ := json.Marshal(s.EtcdConfig)
-
+func (s *EtcdTestSuite) TestInit() {
 	tests := []struct {
 		description string
 		configJSON  string
@@ -102,7 +99,7 @@ func (s *EtcdTestSuite) TestEtcdInit() {
 		{"bad tls config should fail",
 			`{"cert":"/dev/null/foo", "key":"asdf", "cacert":"asdf"}`, true},
 		{"valid config should succeed",
-			string(goodConfigBytes), false},
+			string(s.StoreConfig), false},
 	}
 
 	for _, test := range tests {
@@ -115,72 +112,4 @@ func (s *EtcdTestSuite) TestEtcdInit() {
 			s.NoError(err, test.description)
 		}
 	}
-}
-
-func (s *EtcdTestSuite) TestEtcdPut() {
-	s.NoError(s.Store.Put(s.Image), "complete image should be put")
-}
-
-func (s *EtcdTestSuite) TestEtcdGetBySource() {
-	_ = s.Store.Put(s.Image)
-
-	// Image exists
-	image, err := s.Store.GetBySource(s.Image.Source)
-	s.NoError(err, "retrieving existing image should not fail")
-	s.NotNil(image, "image should be found")
-	s.Equal(s.Image.ID, image.ID, "image should be what we expect")
-
-	// Image doesn't exist
-	image, err = s.Store.GetBySource("foobar")
-	s.Error(err, "image shouldn't be found")
-}
-
-func (s *EtcdTestSuite) TestEtcdGetByID() {
-	_ = s.Store.Put(s.Image)
-
-	// Image exists
-	image, err := s.Store.GetByID(s.Image.ID)
-	s.NoError(err, "retrieving existing image should not fail")
-	s.NotNil(image, "image should be found")
-	s.Equal(s.Image.ID, image.ID, "image should be what we expect")
-
-	// Image doesn't exist
-	image, err = s.Store.GetByID("foobar")
-	s.Error(err, "image shouldn't be found")
-}
-
-func (s *EtcdTestSuite) TestEtcdList() {
-	_ = s.Store.Put(s.Image)
-
-	images, err := s.Store.List("")
-	s.NoError(err, "listing all images shouldn't error")
-	s.NotNil(images)
-	s.Len(images, 1, "list should only contain the one image added")
-
-	var found bool
-	for _, image := range images {
-		if image.ID == s.Image.ID {
-			found = true
-			break
-		}
-	}
-	s.True(found, "image should be in list")
-}
-
-func (s *EtcdTestSuite) TestEtcdDelete() {
-	_ = s.Store.Put(s.Image)
-
-	s.NoError(s.Store.Delete(s.Image.ID), "deleting existing image shouldn't error")
-	image, _ := s.Store.GetByID(s.Image.ID)
-	s.Nil(image, "image should be deleted")
-
-	s.Error(s.Store.Delete(s.Image.ID), "deleting missing image should error")
-}
-
-func (s *EtcdTestSuite) TestEtcdShutdown() {
-	s.NoError(s.Store.Shutdown(), "shutdown shouldn't error")
-}
-
-func init() {
-	log.SetLevel(log.FatalLevel)
 }

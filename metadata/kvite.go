@@ -8,6 +8,14 @@ import (
 	"github.com/mistifyio/kvite"
 )
 
+// ErrMissingFilename is used when the store config is missing a required
+// filename
+var ErrMissingFilename = errors.New("missing filename")
+
+// ErrMissingTable is used when the store config is missing a required table
+// name
+var ErrMissingTable = errors.New("missing table")
+
 type (
 	// KVite is a metadata store using kvite
 	KVite struct {
@@ -33,10 +41,10 @@ const kviteBucket = "images"
 // Validate checks whether the config is valid
 func (kvc *KViteConfig) Validate() error {
 	if kvc.Filename == "" {
-		return errors.New("empty filename")
+		return ErrMissingFilename
 	}
 	if kvc.Table == "" {
-		return errors.New("empty table")
+		return ErrMissingTable
 	}
 	return nil
 }

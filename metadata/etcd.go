@@ -168,7 +168,7 @@ func (es *etcdStore) GetByID(imageID string) (*Image, error) {
 	resp, err := es.client.Get(metadataKey, false, false)
 	if err != nil {
 		etcdErr := err.(*etcd.EtcdError)
-		if etcdErr.ErrorCode != etcderr.EcodeKeyNotFound {
+		if etcdErr.ErrorCode == etcderr.EcodeKeyNotFound {
 			return nil, ErrNotFound
 		}
 
@@ -243,15 +243,18 @@ func (es *etcdStore) Put(image *Image) error {
 	return nil
 }
 
-// Delete removs an image from etcd
+// Delete removes an image from etcd
 func (es *etcdStore) Delete(imageID string) error {
 	key := path.Join(es.prefix, imageID)
 	if _, err := es.client.Delete(key, true); err != nil {
-		log.WithFields(etcdLogFields).WithFields(log.Fields{
-			"error": err,
-			"key":   key,
-		}).Error("failed to delete image")
-		return err
+		etcdErr := err.(*etcd.EtcdError)
+		if etcdErr.ErrorCode != etcderr.EcodeKeyNotFound {
+			log.WithFields(etcdLogFields).WithFields(log.Fields{
+				"error": err,
+				"key":   key,
+			}).Error("failed to delete image")
+			return err
+		}
 	}
 
 	return nil
