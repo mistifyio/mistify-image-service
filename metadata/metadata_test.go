@@ -33,7 +33,7 @@ func (s *MetadataTestSuite) TestRegister() {
 		return &mocks.Store{}
 	})
 
-	s.Contains(metadata.List(), s.MockStoreName)
+	s.Contains(metadata.List(), s.MockStoreName, "should contain registered store")
 }
 
 func (s *MetadataTestSuite) TestNewStore() {
@@ -41,5 +41,6 @@ func (s *MetadataTestSuite) TestNewStore() {
 		return &mocks.Store{}
 	})
 
-	s.NotNil(metadata.NewStore(s.MockStoreName))
+	s.NotNil(metadata.NewStore(s.MockStoreName), "should create registered store")
+	s.Nil(metadata.NewStore("asdf"), "shouldn't create unregistered store")
 }
