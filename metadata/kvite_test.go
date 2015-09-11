@@ -79,8 +79,8 @@ func (s *KViteTestSuite) TestInit() {
 			"not actually json", true},
 		{"incomplete config should fail",
 			`{"table":"blah"}`, true},
-		{"invalid filepath should fail",
-			`{"filepath":"/dev/null/foo","table":"foo"}`, true},
+		{"invalid filename should fail",
+			`{"filename":"/dev/null/foo","table":"foo"}`, true},
 		{"valid config should succeed",
 			string(s.StoreConfig), false},
 	}

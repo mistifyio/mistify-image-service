@@ -53,7 +53,7 @@ func (s *StoreTestSuite) TestGetBySource() {
 
 	// Image doesn't exist
 	image, err = s.Store.GetBySource("foobar")
-	s.Error(err, "image shouldn't be found")
+	s.Equal(metadata.ErrNotFound, err, "image shouldn't be found")
 }
 
 func (s *StoreTestSuite) TestGetByID() {
@@ -67,7 +67,7 @@ func (s *StoreTestSuite) TestGetByID() {
 
 	// Image doesn't exist
 	image, err = s.Store.GetByID("foobar")
-	s.Error(err, "image shouldn't be found")
+	s.Equal(metadata.ErrNotFound, err, "image shouldn't be found")
 }
 
 func (s *StoreTestSuite) TestList() {
@@ -100,4 +100,5 @@ func (s *StoreTestSuite) TestDelete() {
 
 func (s *StoreTestSuite) TestShutdown() {
 	s.NoError(s.Store.Shutdown(), "shutdown shouldn't error")
+	s.NoError(s.Store.Shutdown(), "second shutdown shouldn't error")
 }

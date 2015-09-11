@@ -98,6 +98,8 @@ func (s *EtcdTestSuite) TestInit() {
 			`{"filepath":"/dev/null/foo"}`, true},
 		{"bad tls config should fail",
 			`{"cert":"/dev/null/foo", "key":"asdf", "cacert":"asdf"}`, true},
+		{"bad prefix config should fail",
+			`{"prefix": ".."}`, true},
 		{"valid config should succeed",
 			string(s.StoreConfig), false},
 	}

@@ -113,8 +113,8 @@ func (es *etcdStore) Init(configBytes []byte) error {
 	es.client = client
 
 	if _, err := es.client.CreateDir(es.prefix, 0); err != nil {
-		etcdErr := err.(*etcd.EtcdError)
-		if etcdErr.ErrorCode != etcderr.EcodeNodeExist {
+		etcdErr, ok := err.(*etcd.EtcdError)
+		if !ok || etcdErr.ErrorCode != etcderr.EcodeNodeExist {
 			log.WithFields(etcdLogFields).WithFields(log.Fields{
 				"error": err,
 				"key":   es.prefix,
