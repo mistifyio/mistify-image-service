@@ -11,6 +11,9 @@ import (
 	logx "github.com/mistifyio/mistify-logrus-ext"
 )
 
+// ErrMissingDir is used when the required dir is omitted from the config
+var ErrMissingDir = errors.New("missing dir")
+
 type (
 	// FS is an image store using the filesystem
 	FS struct {
@@ -32,7 +35,7 @@ var fsLogFields = log.Fields{
 // Validate checks whether the config is valid
 func (fsc *FSConfig) Validate() error {
 	if fsc.Dir == "" {
-		return errors.New("empty dir path")
+		return ErrMissingDir
 	}
 	return nil
 }

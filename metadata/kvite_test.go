@@ -16,11 +16,6 @@ type KViteTestSuite struct {
 	KViteConfig *metadata.KViteConfig
 }
 
-func (s *KViteTestSuite) SetupSuite() {
-	// General store suite setup
-	s.StoreTestSuite.SetupSuite()
-}
-
 func (s *KViteTestSuite) SetupTest() {
 	// KVite specific test setup
 	dbfile, _ := ioutil.TempFile("", "kviteTest-"+uuid.New()+".db")
