@@ -165,11 +165,12 @@ func getImage(w http.ResponseWriter, r *http.Request) *metadata.Image {
 	imageID := vars["imageID"]
 	image, err := ctx.MetadataStore.GetByID(imageID)
 	if err != nil {
-		hr.JSONError(http.StatusInternalServerError, err)
-		return nil
-	}
-	if image == nil {
-		hr.JSONError(http.StatusNotFound, errors.New("not found"))
+		code := http.StatusInternalServerError
+		if err == metadata.ErrNotFound {
+			code = http.StatusNotFound
+		}
+
+		hr.JSONError(code, err)
 		return nil
 	}
 

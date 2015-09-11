@@ -11,16 +11,20 @@ import (
 	"github.com/coreos/go-etcd/etcd"
 )
 
+// ErrIncompleteTLSConfig is used when something is missing from an etcd tls
+// configuration
+var ErrIncompleteTLSConfig = errors.New("incomplete tls config")
+
 type (
 	// etcdStore is a metadata store using etcd
 	etcdStore struct {
 		client *etcd.Client
 		prefix string
-		config *etcdConfig
+		config *EtcdConfig
 	}
 
-	// etcdConfig contains config options to set up an etcd client
-	etcdConfig struct {
+	// EtcdConfig contains config options to set up an etcd client
+	EtcdConfig struct {
 		Machines      []string
 		Cert          string
 		Key           string
@@ -39,7 +43,7 @@ var etcdLogFields = log.Fields{
 
 // Validate checks whether the config is valid and determines what method
 // is required to create the new client based on what is provided
-func (ec *etcdConfig) Validate() error {
+func (ec *EtcdConfig) Validate() error {
 	if ec.Filepath != "" {
 		ec.clientNewType = "file"
 		return nil
@@ -50,14 +54,13 @@ func (ec *etcdConfig) Validate() error {
 	tlsMissing := ec.Cert == "" || ec.Key == "" || ec.CaCert == ""
 	if tlsPresent {
 		if tlsMissing {
-			err := errors.New("incomplete tls config")
 			log.WithFields(etcdLogFields).WithFields(log.Fields{
-				"error":  err,
+				"error":  ErrIncompleteTLSConfig,
 				"cert":   ec.Cert,
 				"key":    ec.Key,
 				"caCert": ec.CaCert,
-			}).Error(err)
-			return err
+			}).Error(ErrIncompleteTLSConfig)
+			return ErrIncompleteTLSConfig
 		}
 		ec.clientNewType = "tls"
 	}
@@ -66,7 +69,7 @@ func (ec *etcdConfig) Validate() error {
 
 // Init parses the config and creates an etcd client
 func (es *etcdStore) Init(configBytes []byte) error {
-	config := &etcdConfig{}
+	config := &EtcdConfig{}
 
 	// Parse the config json
 	if err := json.Unmarshal(configBytes, config); err != nil {
@@ -164,6 +167,11 @@ func (es *etcdStore) GetByID(imageID string) (*Image, error) {
 	metadataKey := es.metadataKey(imageID)
 	resp, err := es.client.Get(metadataKey, false, false)
 	if err != nil {
+		etcdErr := err.(*etcd.EtcdError)
+		if etcdErr.ErrorCode != etcderr.EcodeKeyNotFound {
+			return nil, ErrNotFound
+		}
+
 		log.WithFields(etcdLogFields).WithFields(log.Fields{
 			"error": err,
 			"key":   metadataKey,
@@ -208,7 +216,7 @@ func (es *etcdStore) GetBySource(imageSource string) (*Image, error) {
 		}
 	}
 
-	return nil, nil
+	return nil, ErrNotFound
 }
 
 // Put stores an image in etcd

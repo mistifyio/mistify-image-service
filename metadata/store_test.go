@@ -1,91 +1,45 @@
-package metadata
+package metadata_test
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"github.com/mistifyio/mistify-image-service/metadata"
+	"github.com/mistifyio/mistify-image-service/metadata/mocks"
+	"github.com/stretchr/testify/suite"
 )
 
-type MockStore struct{}
+type StoreTestSuite struct {
+	suite.Suite
+	MockStoreName string
+}
 
-func (ms *MockStore) Init(b []byte) error                  { return nil }
-func (ms *MockStore) Shutdown() error                      { return nil }
-func (ms *MockStore) List(s string) ([]*Image, error)      { return []*Image{}, nil }
-func (ms *MockStore) GetByID(s string) (*Image, error)     { return &Image{}, nil }
-func (ms *MockStore) GetBySource(s string) (*Image, error) { return &Image{}, nil }
-func (ms *MockStore) Put(i *Image) error                   { return nil }
-func (ms *MockStore) Delete(s string) error                { return nil }
-
-func TestMain(m *testing.M) {
-	code := 0
-	defer func() {
-		os.Exit(code)
-	}()
-
+func (s *StoreTestSuite) SetupSuite() {
 	log.SetLevel(log.FatalLevel)
-
-	// Store-specific setup
-
-	// KVite
-	testKviteFile, err := ioutil.TempFile("", "kvitetest.db")
-	if err != nil {
-		log.WithField("error", err).Fatal("failed to create kvite temp file")
-		return
-	}
-	testKviteConfig.Filename = testKviteFile.Name()
-	defer func() {
-		if err := os.RemoveAll(testKviteConfig.Filename); err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"filename": testKviteConfig.Filename,
-			}).Error("could not clean up kvite file")
-		}
-	}()
-
-	// Etcd
-	defer func() {
-		es, ok := testEtcdStore.(*etcdStore)
-		if !ok {
-			return
-		}
-		if _, err := es.client.Delete(testEtcdConfig.Prefix, true); err != nil {
-			log.WithFields(log.Fields{
-				"error":  err,
-				"prefix": testEtcdConfig.Prefix,
-			}).Error("could not clean up etcd prefix")
-		}
-	}()
-
-	// Run the tests
-	code = m.Run()
+	s.MockStoreName = "mock"
 }
 
-func TestList(t *testing.T) {
-	list := List()
-	assert.NotNil(t, list)
+func TestStoreTestSuite(t *testing.T) {
+	suite.Run(t, new(StoreTestSuite))
 }
 
-func TestNewStore(t *testing.T) {
-	list := List()
-	if len(list) == 0 {
-		return
-	}
-
-	assert.NotNil(t, NewStore(list[0]))
-	assert.Nil(t, NewStore("qweryasdf"))
+func (s *StoreTestSuite) TestList() {
+	list := metadata.List()
+	s.NotNil(list)
 }
 
-func TestRegister(t *testing.T) {
-	registerMockStore()
-
-	assert.NotNil(t, NewStore("mock"))
-}
-
-func registerMockStore() {
-	Register("mock", func() Store {
-		return &MockStore{}
+func (s *StoreTestSuite) TestRegister() {
+	metadata.Register(s.MockStoreName, func() metadata.Store {
+		return &mocks.Store{}
 	})
+
+	s.Contains(metadata.List(), s.MockStoreName)
+}
+
+func (s *StoreTestSuite) TestNewStore() {
+	metadata.Register(s.MockStoreName, func() metadata.Store {
+		return &mocks.Store{}
+	})
+
+	s.NotNil(metadata.NewStore(s.MockStoreName))
 }

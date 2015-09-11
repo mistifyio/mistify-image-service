@@ -1,12 +1,18 @@
 // Package metadata handles the storing and retrieval of image metadata.
 package metadata
 
+import "errors"
+
 // stores maps names to functions that generate a new Store of that type.
 // New Store types can register themselves, eliminating the need to hardcode
 // new switch cases for new instance creation. The function should just return
 // a pointer to a new Store instance, with any connection/configuration handled
 // separately via Store.Init().
 var stores = map[string]func() Store{}
+
+// ErrNotFound is used when an attempt is made to retrieve an image, but it
+// does not exist
+var ErrNotFound = errors.New("image not found")
 
 type (
 	// Store provides a common API for image storage backends

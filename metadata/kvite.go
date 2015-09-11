@@ -140,9 +140,10 @@ func (kv *KVite) GetByID(imageID string) (*Image, error) {
 				"error":   err,
 				"imageID": imageID,
 			}).Error("failed to retrieve image")
+			return err
 		}
 		if value == nil {
-			return nil
+			return ErrNotFound
 		}
 
 		if err := json.Unmarshal(value, &image); err != nil {
@@ -200,7 +201,7 @@ func (kv *KVite) GetBySource(imageSource string) (*Image, error) {
 		return nil, err
 	}
 	if foundImage.ID == "" {
-		return nil, nil
+		return nil, ErrNotFound
 	}
 	return &foundImage, nil
 }
