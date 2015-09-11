@@ -9,26 +9,26 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type StoreTestSuite struct {
+type MetadataTestSuite struct {
 	suite.Suite
 	MockStoreName string
 }
 
-func (s *StoreTestSuite) SetupSuite() {
+func (s *MetadataTestSuite) SetupSuite() {
 	log.SetLevel(log.FatalLevel)
 	s.MockStoreName = "mock"
 }
 
-func TestStoreTestSuite(t *testing.T) {
-	suite.Run(t, new(StoreTestSuite))
+func TestMetadataTestSuite(t *testing.T) {
+	suite.Run(t, new(MetadataTestSuite))
 }
 
-func (s *StoreTestSuite) TestList() {
+func (s *MetadataTestSuite) TestList() {
 	list := metadata.List()
 	s.NotNil(list)
 }
 
-func (s *StoreTestSuite) TestRegister() {
+func (s *MetadataTestSuite) TestRegister() {
 	metadata.Register(s.MockStoreName, func() metadata.Store {
 		return &mocks.Store{}
 	})
@@ -36,7 +36,7 @@ func (s *StoreTestSuite) TestRegister() {
 	s.Contains(metadata.List(), s.MockStoreName)
 }
 
-func (s *StoreTestSuite) TestNewStore() {
+func (s *MetadataTestSuite) TestNewStore() {
 	metadata.Register(s.MockStoreName, func() metadata.Store {
 		return &mocks.Store{}
 	})
