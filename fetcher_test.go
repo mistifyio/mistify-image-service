@@ -34,6 +34,10 @@ func (s *FetcherTestSuite) SetupSuite() {
 
 	// Test Server to serve image data for fetching
 	s.FetchServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/404" {
+			http.NotFound(w, r)
+			return
+		}
 		if _, err := w.Write(s.ImageData); err != nil {
 			log.WithField("error", err).Error("Failed to write mock image data to response")
 		}
@@ -85,6 +89,10 @@ func (s *FetcherTestSuite) TestFetcherReceive() {
 
 	// Create the upload request
 	req, _ := http.NewRequest("GET", "http://localhost", bytes.NewReader(s.ImageData))
+
+	_, err := s.Context.Fetcher.Receive(req)
+	s.Error(err, "missing type header should fail")
+
 	req.Header.Add("X-Image-Type", "kvm")
 	req.Header.Add("X-Image-Comment", "test image")
 
@@ -97,28 +105,55 @@ func (s *FetcherTestSuite) TestFetcherReceive() {
 }
 
 func (s *FetcherTestSuite) TestFetcherFetch() {
-	image := &metadata.Image{
-		ID:     metadata.NewID(),
-		Source: s.FetchServer.URL,
-		Type:   "kvm",
+	imageReq := &metadata.Image{
+		ID: metadata.NewID(),
 	}
 
-	image, err := s.Context.Fetcher.Fetch(image)
-	s.NoError(err)
-	s.NotNil(image.ID)
-	// Wait for the image to be completely fetched
-	for i := 0; i < 300; i++ {
-		image, err := s.Context.MetadataStore.GetByID(image.ID)
-		s.Require().NotNil(image, "image should not be nil")
-		s.NoError(err)
+	_, err := s.Context.Fetcher.Fetch(imageReq)
+	s.Error(err, "missing source should error")
+	imageReq.Source = "asdf"
 
-		if image.Status == metadata.StatusComplete || image.Status == metadata.StatusError {
-			break
+	_, err = s.Context.Fetcher.Fetch(imageReq)
+	s.Error(err, "missing type should error")
+	imageReq.Type = "kvm"
+
+	tests := []struct {
+		source      string
+		finalStatus string
+	}{
+		{"asdf", metadata.StatusError},
+		{s.FetchServer.URL + "/404", metadata.StatusError},
+		{s.FetchServer.URL, metadata.StatusComplete},
+	}
+
+	for _, test := range tests {
+		imageReq = &metadata.Image{
+			ID:     metadata.NewID(),
+			Source: test.source,
+			Type:   "kvm",
 		}
-		time.Sleep(100 * time.Millisecond)
+		imageReq.Source = test.source
+		image, err := s.Context.Fetcher.Fetch(imageReq)
+		s.NoError(err, "valid config should have no initial error")
+		s.Equal(metadata.StatusPending, image.Status, "new image should start out pending")
+		for i := 0; i < 300; i++ {
+			image, err := s.Context.MetadataStore.GetByID(image.ID)
+			s.NotNil(image, "image should not be nil")
+			s.NoError(err)
+
+			if image.Status == metadata.StatusComplete || image.Status == metadata.StatusError {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		s.Equal(test.finalStatus, image.Status, "final status should be expected for source %s", test.source)
+		if test.finalStatus == metadata.StatusComplete {
+			s.EqualValues(len(s.ImageData), image.Size, "final size should be expected")
+		}
 	}
-	s.Equal(metadata.StatusComplete, image.Status)
-	s.Equal("kvm", image.Type)
-	s.Equal(s.FetchServer.URL, image.Source)
-	s.EqualValues(len(s.ImageData), image.Size)
+
+	image, err := s.Context.Fetcher.Fetch(imageReq)
+	s.NoError(err)
+	s.NotNil(image)
+	s.Equal(metadata.StatusComplete, image.Status, "previously fetched image should be returned ready")
 }
