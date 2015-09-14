@@ -25,6 +25,28 @@ const (
 Valid image types
 
 ```go
+var ErrIncompleteTLSConfig = errors.New("incomplete tls config")
+```
+ErrIncompleteTLSConfig is used when something is missing from an etcd tls
+configuration
+
+```go
+var ErrMissingFilename = errors.New("missing filename")
+```
+ErrMissingFilename is used when the store config is missing a required filename
+
+```go
+var ErrMissingTable = errors.New("missing table")
+```
+ErrMissingTable is used when the store config is missing a required table name
+
+```go
+var ErrNotFound = errors.New("image not found")
+```
+ErrNotFound is used when an attempt is made to retrieve an image, but it does
+not exist
+
+```go
 var ValidImageTypes = map[string]struct{}{
 	ImageTypeKVM:       struct{}{},
 	ImageTypeContainer: struct{}{},
@@ -59,6 +81,29 @@ NewID generates a new unique uuid
 func Register(name string, newFunc func() Store)
 ```
 Register adds a new Store under a name
+
+#### type EtcdConfig
+
+```go
+type EtcdConfig struct {
+	Machines []string
+	Cert     string
+	Key      string
+	CaCert   string
+	Filepath string
+	Prefix   string
+}
+```
+
+EtcdConfig contains config options to set up an etcd client
+
+#### func (*EtcdConfig) Validate
+
+```go
+func (ec *EtcdConfig) Validate() error
+```
+Validate checks whether the config is valid and determines what method is
+required to create the new client based on what is provided
 
 #### type Image
 

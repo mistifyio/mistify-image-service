@@ -6,6 +6,11 @@ Package images handles the storing and retrieval of raw image data.
 
 ## Usage
 
+```go
+var ErrMissingDir = errors.New("missing dir")
+```
+ErrMissingDir is used when the required dir is omitted from the config
+
 #### func  List
 
 ```go
