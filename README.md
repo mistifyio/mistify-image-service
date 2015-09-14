@@ -81,14 +81,14 @@ NewContext creates a new context from configuration
 ```go
 func (ctx *Context) InitImageStore(storeType string, configBytes []byte) error
 ```
-NewImageStore creates a new image store for the context
+InitImageStore creates a new image store for the context
 
 #### func (*Context) InitMetadataStore
 
 ```go
 func (ctx *Context) InitMetadataStore(storeType string, configBytes []byte) error
 ```
-NewMetadataStore creates a new metadata store for the context
+InitMetadataStore creates a new metadata store for the context
 
 #### type Fetcher
 
