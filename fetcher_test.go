@@ -50,16 +50,16 @@ func (s *FetcherTestSuite) SetupTest() {
 	imageStoreConfig := &images.FSConfig{
 		Dir: s.StoreDir,
 	}
-	viper.SetDefault("imageStoreType", "fs")
-	viper.SetDefault("imageStoreConfig", imageStoreConfig)
+	viper.Set("imageStoreType", "fs")
+	viper.Set("imageStoreConfig", imageStoreConfig)
 
 	// Metadata Store Setup
 	metadataStoreConfig := &metadata.KViteConfig{
 		Filename: filepath.Join(s.StoreDir, "kvite.db"),
 		Table:    "test",
 	}
-	viper.SetDefault("metadataStoreType", "kvite")
-	viper.SetDefault("metadataStoreConfig", metadataStoreConfig)
+	viper.Set("metadataStoreType", "kvite")
+	viper.Set("metadataStoreConfig", metadataStoreConfig)
 
 	// Set up context
 	ctx, err := imageservice.NewContext()
