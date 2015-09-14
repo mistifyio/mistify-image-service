@@ -181,6 +181,13 @@ func (fs *FS) Put(imageID string, in io.Reader) error {
 // Delete removes an image from the filesystem
 func (fs *FS) Delete(imageID string) error {
 	imageFilepath := fs.imageFilepath(imageID)
+
+	// Since os.Remove will remove an empty dir, don't chance it if the
+	// imageFilepath ended up as the base dir
+	if imageFilepath == fs.Config.Dir {
+		return nil
+	}
+
 	if err := os.Remove(imageFilepath); err != nil && !os.IsNotExist(err) {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
 			"error":    err,

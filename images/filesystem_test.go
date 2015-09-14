@@ -82,3 +82,11 @@ func (s *FSTestSuite) TestInit() {
 		}
 	}
 }
+
+func (s *FSTestSuite) TestDelete() {
+	s.StoreTestSuite.TestDelete()
+	// Make sure delete isn't able to delete the directory
+	s.Store.Delete("")
+	_, err := os.Stat(s.FSConfig.Dir)
+	s.NoError(err, "should not delete base directory")
+}

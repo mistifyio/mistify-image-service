@@ -41,6 +41,7 @@ func (s *StoreTestSuite) TestInit() {
 func (s *StoreTestSuite) TestPut() {
 	in := bytes.NewReader(s.ImageData)
 	s.NoError(s.Store.Put(s.ImageID, in))
+	s.Error(s.Store.Put("", in), "shouldn't work without id")
 }
 
 func (s *StoreTestSuite) TestStat() {
@@ -65,13 +66,16 @@ func (s *StoreTestSuite) TestGet() {
 	s.Equal(s.ImageData, out.Bytes())
 
 	s.Error(s.Store.Get("asdf", out))
+	s.Error(s.Store.Get("", out), "missing id should error")
 }
 
 func (s *StoreTestSuite) TestDelete() {
 	in := bytes.NewReader(s.ImageData)
 	_ = s.Store.Put(s.ImageID, in)
 
-	s.NoError(s.Store.Delete(s.ImageID))
+	s.NoError(s.Store.Delete(s.ImageID), "deleting existing image shouldn't error")
+	s.NoError(s.Store.Delete("asdf"), "deleting nonexistant image should error")
+	s.NoError(s.Store.Delete(""), "missing id should not error")
 }
 
 func (s *StoreTestSuite) TestShutdown() {
