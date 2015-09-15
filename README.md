@@ -39,7 +39,7 @@ RegisterImageRoutes registers the image routes and handlers
 #### func  Run
 
 ```go
-func Run(ctx *Context, port int) error
+func Run(ctx *Context, port int) *graceful.Server
 ```
 Run starts the server
 
