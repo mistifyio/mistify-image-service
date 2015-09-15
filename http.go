@@ -53,7 +53,7 @@ func Run(ctx *Context, port int) *graceful.Server {
 		},
 		func(h http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				context.Set(r, ctxKey, ctx)
+				SetContext(r, ctx)
 				h.ServeHTTP(w, r)
 			})
 		},
