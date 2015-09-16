@@ -80,7 +80,7 @@ func (s *APITestSuite) SetupTest() {
 
 	// Start API server
 	s.APIServer = imageservice.Run(ctx, s.Port)
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func (s *APITestSuite) TearDownTest() {
@@ -101,22 +101,40 @@ func TestAPITestSuite(t *testing.T) {
 	suite.Run(t, new(APITestSuite))
 }
 
-func (s *APITestSuite) TestRecieveImage() {
-	image, _, err := s.uploadImage("kvm")
-	s.NoError(err, "upload shouldn't error")
-	s.NotEmpty(image.ID, "should have ID assigned")
-	s.Equal(metadata.StatusComplete, image.Status, "final stauts should be complete")
-	s.EqualValues(len(s.ImageData), image.Size, "final size should be expected")
+func (s *APITestSuite) TestReceiveImage() {
+	tests := []struct {
+		description        string
+		imageType          string
+		expectedStatusCode int
+	}{
+		{"missing type should fail", "", http.StatusBadRequest},
+		{"invalid type should fail", "asdf", http.StatusBadRequest},
+		{"valid type should succeed", "kvm", http.StatusOK},
+	}
 
-	_, _, err = s.uploadImage("asdf")
-	s.Error(err, "upload shouldn't error")
+	for _, test := range tests {
+		msg := func(val string) string {
+			return test.description + " : " + val
+		}
+
+		image, resp, err := s.uploadImage(test.imageType)
+		s.Equal(test.expectedStatusCode, resp.StatusCode, msg("status code should be expected"))
+		if test.expectedStatusCode != http.StatusOK {
+			continue
+		}
+
+		s.NoError(err, msg("upload shouldn't error"))
+		s.NotEmpty(image.ID, msg("should have ID assigned"))
+		s.Equal(metadata.StatusComplete, image.Status, msg("final stauts should be complete"))
+		s.EqualValues(len(s.ImageData), image.Size, msg("final size should be expected"))
+	}
 }
 
 func (s *APITestSuite) TestFetchImage() {
 	tests := []struct {
-		description    string
-		requestData    []byte
-		expectedStatus int
+		description        string
+		requestData        []byte
+		expectedStatusCode int
 	}{
 		{"bad json should fail",
 			[]byte("asdf"), http.StatusBadRequest},
@@ -135,10 +153,10 @@ func (s *APITestSuite) TestFetchImage() {
 
 		resp, err := http.Post(s.APIURL, "application/json", bytes.NewBuffer(test.requestData))
 		s.NoError(err, msg("fetch request shouldn't error"))
-		s.Equal(test.expectedStatus, resp.StatusCode, msg("fetch response should be accepted"))
+		s.Equal(test.expectedStatusCode, resp.StatusCode, msg("fetch response should be accepted"))
 		defer logx.LogReturnedErr(resp.Body.Close, nil, "failed to close fetch response body")
 
-		if test.expectedStatus != http.StatusAccepted {
+		if test.expectedStatusCode != http.StatusAccepted {
 			continue
 		}
 
@@ -170,10 +188,10 @@ func (s *APITestSuite) TestListImages() {
 	imageContainer, _, _ := s.uploadImage("container")
 
 	tests := []struct {
-		description    string
-		imageType      string
-		expectedStatus int
-		expectedImages []*metadata.Image
+		description        string
+		imageType          string
+		expectedStatusCode int
+		expectedImages     []*metadata.Image
 	}{
 		{"no filter should list all images",
 			"", http.StatusOK, []*metadata.Image{imageKVM, imageContainer}},
@@ -192,7 +210,7 @@ func (s *APITestSuite) TestListImages() {
 
 		resp, err := http.Get(fmt.Sprintf("%s?type=%s", s.APIURL, test.imageType))
 		s.NoError(err, msg("request should not error"))
-		s.Equal(test.expectedStatus, resp.StatusCode, msg("http status codes should match"))
+		s.Equal(test.expectedStatusCode, resp.StatusCode, msg("http status codes should match"))
 		defer logx.LogReturnedErr(resp.Body.Close, nil, "failed to close fetch response body")
 
 		if test.expectedImages == nil {
