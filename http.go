@@ -6,12 +6,16 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
+	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/bakins/logrus-middleware"
 	"github.com/bakins/net-http-recover"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"github.com/tylerb/graceful"
 )
 
 const ctxKey string = "mistifyImageServiceContext"
@@ -32,7 +36,7 @@ type (
 )
 
 // Run starts the server
-func Run(ctx *Context, port int) error {
+func Run(ctx *Context, port int) *graceful.Server {
 	router := mux.NewRouter()
 	router.StrictSlash(true)
 
@@ -49,7 +53,7 @@ func Run(ctx *Context, port int) error {
 		},
 		func(h http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				context.Set(r, ctxKey, ctx)
+				SetContext(r, ctx)
 				h.ServeHTTP(w, r)
 			})
 		},
@@ -62,12 +66,26 @@ func Run(ctx *Context, port int) error {
 
 	RegisterImageRoutes("/images", router)
 
-	server := &http.Server{
-		Addr:           fmt.Sprintf(":%d", port),
-		Handler:        commonMiddleware.Then(router),
-		MaxHeaderBytes: 1 << 20,
+	server := &graceful.Server{
+		Timeout: 5 * time.Second,
+		Server: &http.Server{
+			Addr:           fmt.Sprintf(":%d", port),
+			Handler:        commonMiddleware.Then(router),
+			MaxHeaderBytes: 1 << 20,
+		},
 	}
-	return server.ListenAndServe()
+	go listenAndServe(server)
+	return server
+}
+
+func listenAndServe(server *graceful.Server) {
+	if err := server.ListenAndServe(); err != nil {
+		// Ignore the error from closing the listener, which is involved in the
+		// graceful shutdown
+		if !strings.Contains(err.Error(), "use of closed network connection") {
+			log.WithField("error", err).Fatal("server error")
+		}
+	}
 }
 
 // JSON writes appropriate headers and JSON body to the http response

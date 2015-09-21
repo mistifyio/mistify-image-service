@@ -43,7 +43,7 @@ func main() {
 		"port": viper.GetInt("port"),
 	}).Info("running server")
 
-	if err := imageservice.Run(context, viper.GetInt("port")); err != nil {
-		log.WithField("error", err).Fatal("failed to run server")
-	}
+	server := imageservice.Run(context, viper.GetInt("port"))
+	// Block until the server is stopped
+	<-server.StopChan()
 }

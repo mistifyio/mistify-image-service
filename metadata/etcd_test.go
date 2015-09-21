@@ -1,116 +1,117 @@
-package metadata
+package metadata_test
 
 import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/coreos/go-etcd/etcd"
+	"github.com/mistifyio/mistify-image-service/metadata"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/suite"
 )
 
-var testEtcdConfig = &etcdConfig{
-	Prefix: "etcdTest",
+type EtcdTestSuite struct {
+	StoreTestSuite
+	EtcdConfig *metadata.EtcdConfig
+	// EtcdClient is for post-test cleanup of etcd
+	EtcdClient *etcd.Client
 }
 
-var testEtcdStore Store
-var testEtcdImage *Image
+func (s *EtcdTestSuite) SetupSuite() {
+	// Etcd specific suite setup
+	s.EtcdClient = etcd.NewClient(nil)
 
-func TestEtcdConfigValidate(t *testing.T) {
-	var ec *etcdConfig
+	// General store suite setup
+	s.StoreTestSuite.SetupSuite()
+}
 
-	ec = &etcdConfig{}
-	assert.NoError(t, ec.Validate())
-
-	ec = &etcdConfig{
-		Filepath: "/foo",
+func (s *EtcdTestSuite) SetupTest() {
+	// Etcd specific test setup
+	s.EtcdConfig = &metadata.EtcdConfig{
+		Prefix: "etcdTest-" + uuid.New(),
 	}
-	assert.NoError(t, ec.Validate())
+	configBytes, _ := json.Marshal(s.EtcdConfig)
+	s.StoreConfig = configBytes
 
-	ec = &etcdConfig{
-		Cert: "foobar",
+	// General store test setup
+	s.StoreTestSuite.SetupTest()
+}
+
+func (s *EtcdTestSuite) TearDownTest() {
+	// Clean up etcd
+	_, err := s.EtcdClient.Delete(s.EtcdConfig.Prefix, true)
+	s.NoError(err)
+}
+
+func TestEtcdTestSuite(t *testing.T) {
+	s := new(EtcdTestSuite)
+	s.StoreName = "etcd"
+	suite.Run(t, s)
+}
+
+func (s *EtcdTestSuite) TestConfigValidate() {
+	tests := []struct {
+		description string
+		config      *metadata.EtcdConfig
+		expectedErr error
+	}{
+		{"empty config should be valid",
+			&metadata.EtcdConfig{}, nil},
+		{"filepath-only config should be valid",
+			&metadata.EtcdConfig{Filepath: "/foo"}, nil},
+		{"prefix-only config should be valid",
+			&metadata.EtcdConfig{Prefix: "foo"}, nil},
+		{"config to use for tests should be valid",
+			s.EtcdConfig, nil},
+		{"cert-only config should be invalid",
+			&metadata.EtcdConfig{Cert: "foo"}, metadata.ErrIncompleteTLSConfig},
+		{"key-only config should be invalid",
+			&metadata.EtcdConfig{Key: "bar"}, metadata.ErrIncompleteTLSConfig},
+		{"cacert-only config should be invalid",
+			&metadata.EtcdConfig{CaCert: "baz"}, metadata.ErrIncompleteTLSConfig},
+		{"complete tls config should be valid",
+			&metadata.EtcdConfig{
+				Cert:   "foo",
+				Key:    "bar",
+				CaCert: "baz",
+			},
+			nil,
+		},
 	}
-	assert.Error(t, ec.Validate())
 
-	ec = &etcdConfig{
-		Cert:   "foobar",
-		Key:    "foobar",
-		CaCert: "foobar",
+	for _, test := range tests {
+		s.Equal(test.expectedErr, test.config.Validate(), test.description)
 	}
-	assert.NoError(t, ec.Validate())
-
-	assert.NoError(t, testEtcdConfig.Validate())
 }
 
-func TestEtcdInit(t *testing.T) {
-	ec := NewStore("etcd")
-	assert.Error(t, ec.Init([]byte("not actually json")))
+func (s *EtcdTestSuite) TestInit() {
+	tests := []struct {
+		description string
+		configJSON  string
+		expectedErr bool
+	}{
+		{"bad json should fail",
+			"not actually json", true},
+		{"incomplete tls config should fail",
+			`{"cert":"blah"}`, true},
+		{"invalid filepath should fail",
+			`{"filepath":"/dev/null/foo"}`, true},
+		{"bad tls config should fail",
+			`{"cert":"/dev/null/foo", "key":"asdf", "cacert":"asdf"}`, true},
+		{"bad prefix config should fail",
+			`{"prefix": ".."}`, true},
+		{"valid config should succeed",
+			string(s.StoreConfig), false},
+	}
 
-	ec = NewStore("etcd")
-	assert.Error(t, ec.Init([]byte(`{"cert":"blah"}`)))
-
-	ec = NewStore("etcd")
-	assert.Error(t, ec.Init([]byte(`{"filepath":"/dev/null/foo"}`)))
-
-	ec = NewStore("etcd")
-	assert.Error(t, ec.Init([]byte(`{"cert":"/dev/null/foo", "key":"asdf", "cacert":"asdf"}`)))
-
-	ec = NewStore("etcd")
-	configBytes, _ := json.Marshal(testEtcdConfig)
-	assert.NoError(t, ec.Init(configBytes))
-
-	testEtcdStore = ec
-
-	ec = NewStore("etcd")
-	assert.NoError(t, ec.Init(configBytes))
-}
-
-func TestEtcdPut(t *testing.T) {
-	assert.NoError(t, testEtcdStore.Put(testEtcdImage))
-}
-
-func TestEtcdGetBySource(t *testing.T) {
-	image, err := testEtcdStore.GetBySource(testEtcdImage.Source)
-	assert.NoError(t, err)
-	assert.Equal(t, testEtcdImage.ID, image.ID)
-
-	image, err = testEtcdStore.GetBySource("foobar")
-	assert.Nil(t, image)
-}
-
-func TestEtcdGetByID(t *testing.T) {
-	image, err := testEtcdStore.GetByID(testEtcdImage.ID)
-	assert.NoError(t, err)
-	assert.Equal(t, testEtcdImage.ID, image.ID)
-
-	image, err = testEtcdStore.GetByID("foobar")
-	assert.Nil(t, image)
-}
-
-func TestEtcdList(t *testing.T) {
-	images, err := testEtcdStore.List("")
-	assert.NoError(t, err)
-	var found bool
-	for _, image := range images {
-		if image.ID == testEtcdImage.ID {
-			found = true
-			break
+	for _, test := range tests {
+		store := metadata.NewStore("etcd")
+		config := []byte(test.configJSON)
+		err := store.Init(config)
+		if test.expectedErr {
+			s.Error(err, test.description)
+		} else {
+			s.NoError(err, test.description)
 		}
-	}
-	assert.True(t, found)
-}
-
-func TestEtcdDelete(t *testing.T) {
-	assert.NoError(t, testEtcdStore.Delete(testEtcdImage.ID))
-	assert.Error(t, testEtcdStore.Delete(testEtcdImage.ID))
-}
-
-func TestEtcdShutdown(t *testing.T) {
-	assert.NoError(t, testEtcdStore.Shutdown())
-}
-
-func init() {
-	testEtcdImage = &Image{
-		ID:     NewID(),
-		Type:   "kvm",
-		Source: "http://localhost",
 	}
 }

@@ -2,98 +2,109 @@ package imageservice_test
 
 import (
 	"encoding/json"
-	"os"
+	"errors"
 	"testing"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/mistify-image-service"
 	"github.com/mistifyio/mistify-image-service/images"
+	imocks "github.com/mistifyio/mistify-image-service/images/mocks"
 	"github.com/mistifyio/mistify-image-service/metadata"
+	mmocks "github.com/mistifyio/mistify-image-service/metadata/mocks"
 	"github.com/spf13/viper"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-var ctx *imageservice.Context
+type ContextTestSuite struct {
+	suite.Suite
+	ValidConfig   interface{}
+	InvalidConfig interface{}
+}
 
-func TestMain(m *testing.M) {
+func (s *ContextTestSuite) SetupSuite() {
 	log.SetLevel(log.FatalLevel)
 
-	imgDir := "/tmp/test_image_service"
-	mdFile := "/tmp/test_image_service.db"
+	s.ValidConfig = map[string]string{"foo": "bar"}
+	s.InvalidConfig = struct{}{}
 
-	// Clean up
-	if err := cleanup(imgDir, mdFile); err != nil {
-		log.Fatal("failed to clean up")
-	}
-
-	// Set up config
-	viper.SetDefault("imageStoreType", "fs")
-	viper.SetDefault("imageStoreConfig", &images.FSConfig{
-		Dir: imgDir,
+	// Images Store Setup
+	images.Register("mock", func() images.Store {
+		m := &imocks.Store{}
+		vj, _ := json.Marshal(s.ValidConfig)
+		m.On("Init", vj).Return(nil)
+		ij, _ := json.Marshal(s.InvalidConfig)
+		m.On("Init", ij).Return(errors.New("asdf"))
+		return m
 	})
 
-	viper.SetDefault("metadataStoreType", "kvite")
-	viper.SetDefault("metadataStoreConfig", &metadata.KViteConfig{
-		Filename: mdFile,
-		Table:    "test_image_service",
+	// Metadata Store Setup
+	metadata.Register("mock", func() metadata.Store {
+		m := &mmocks.Store{}
+		vj, _ := json.Marshal(s.ValidConfig)
+		m.On("Init", vj).Return(nil)
+		ij, _ := json.Marshal(s.InvalidConfig)
+		m.On("Init", ij).Return(errors.New("asdf"))
+		return m
 	})
-
-	// Run the tests
-	code := m.Run()
-
-	// Clean up
-	if err := cleanup(imgDir, mdFile); err != nil {
-		log.Fatal("failed to clean up")
-	}
-
-	// Exit with test run exit code
-	os.Exit(code)
 }
 
-func cleanup(imgDir, mdFile string) error {
-	if err := os.RemoveAll(imgDir); err != nil && !os.IsNotExist(err) {
-		log.Error(err)
-		return err
-	}
+func (s *ContextTestSuite) SetupTest() {
+	// Images Store Setup
+	viper.Set("imageStoreType", "mock")
+	viper.Set("imageStoreConfig", s.ValidConfig)
 
-	if err := os.Remove(mdFile); err != nil && !os.IsNotExist(err) {
-		log.Error(err)
-		return err
-	}
-
-	return nil
+	// Metadata Store Setup
+	viper.Set("metadataStoreType", "mock")
+	viper.Set("metadataStoreConfig", s.ValidConfig)
 }
 
-func TestContextInitImageStore(t *testing.T) {
-	ctx := &imageservice.Context{}
+func TestContextTestSuite(t *testing.T) {
+	suite.Run(t, new(ContextTestSuite))
+}
 
-	assert.Error(t, ctx.InitImageStore("asdfwqfas", nil))
-	assert.Nil(t, ctx.ImageStore)
+func (s *ContextTestSuite) TestContextInitImageStore() {
+	context := &imageservice.Context{}
+
+	s.Error(context.InitImageStore("asdfwqfas", nil), "unknown type should fail")
 
 	imageStoreType := viper.GetString("imageStoreType")
 	imageStoreConfig, _ := json.Marshal(viper.Get("imageStoreConfig"))
-	assert.NoError(t, ctx.InitImageStore(imageStoreType, imageStoreConfig))
-	assert.NotNil(t, ctx.ImageStore)
+	s.NoError(context.InitImageStore(imageStoreType, imageStoreConfig), "known type, valid config should succeed")
+	s.NotNil(context.ImageStore, "known type, valid config should succeed")
+
+	ij, _ := json.Marshal(s.InvalidConfig)
+	s.Error(context.InitImageStore(imageStoreType, ij), "known type, invalid config should fail")
 }
 
-func TestContextNewMetadataStore(t *testing.T) {
-	ctx := &imageservice.Context{}
+func (s *ContextTestSuite) TestContextNewMetadataStore() {
+	context := &imageservice.Context{}
 
-	assert.Error(t, ctx.InitMetadataStore("asdfwqfas", nil))
-	assert.Nil(t, ctx.MetadataStore)
+	s.Error(context.InitMetadataStore("asdfwqfas", nil), "unknown type should fail")
+	s.Nil(context.MetadataStore)
 
 	metadataStoreType := viper.GetString("metadataStoreType")
 	metadataStoreConfig, _ := json.Marshal(viper.Get("metadataStoreConfig"))
-	assert.NoError(t, ctx.InitMetadataStore(metadataStoreType, metadataStoreConfig))
-	assert.NotNil(t, ctx.MetadataStore)
+	s.NoError(context.InitMetadataStore(metadataStoreType, metadataStoreConfig), "known type, valid config should succeed")
+	s.NotNil(context.MetadataStore)
+
+	ij, _ := json.Marshal(s.InvalidConfig)
+	s.Error(context.InitMetadataStore(metadataStoreType, ij), "valid type, invalid config should fail")
 }
 
-func TestNewContext(t *testing.T) {
+func (s *ContextTestSuite) TestNewContext() {
 	context, err := imageservice.NewContext()
-	assert.NoError(t, err)
-	assert.NotNil(t, context)
-	assert.NotNil(t, context.ImageStore)
-	assert.NotNil(t, context.MetadataStore)
-	assert.NotNil(t, context.Fetcher)
-	ctx = context
+	s.NoError(err, "valid store configs should succeed")
+	s.NotNil(context)
+	s.NotNil(context.ImageStore)
+	s.NotNil(context.MetadataStore)
+	s.NotNil(context.Fetcher)
+
+	viper.Set("metadataStoreConfig", s.InvalidConfig)
+	_, err = imageservice.NewContext()
+	s.Error(err, "bad metadata config should fail")
+
+	viper.Set("imageStoreConfig", s.InvalidConfig)
+	_, err = imageservice.NewContext()
+	s.Error(err, "bad image config should fail")
+
 }

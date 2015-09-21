@@ -1,57 +1,96 @@
 package images_test
 
 import (
-	"bytes"
 	"encoding/json"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/mistifyio/mistify-image-service/images"
-	"github.com/stretchr/testify/assert"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/suite"
 )
 
-var fsConfig = &images.FSConfig{}
-
-var fsStore images.Store
-
-func TestFSStore(t *testing.T) {
-	var fsc *images.FSConfig
-
-	fsc = &images.FSConfig{}
-	assert.Error(t, fsc.Validate())
-
-	assert.NoError(t, fsConfig.Validate())
+type FSTestSuite struct {
+	StoreTestSuite
+	FSConfig *images.FSConfig
 }
 
-func TestFSInit(t *testing.T) {
-	fs := images.NewStore("fs")
-	configBytes, _ := json.Marshal(fsConfig)
-	assert.NoError(t, fs.Init(configBytes))
+func (s *FSTestSuite) SetupTest() {
+	// FS specific test setup
+	dir, _ := ioutil.TempDir("", "fsTest-"+uuid.New())
+	s.FSConfig = &images.FSConfig{
+		Dir: dir,
+	}
+	s.StoreConfig, _ = json.Marshal(s.FSConfig)
 
-	fsStore = fs
+	// General store test setup
+	s.StoreTestSuite.SetupTest()
 }
 
-func TestFSPut(t *testing.T) {
-	in := bytes.NewReader(mockImageData)
-	assert.NoError(t, fsStore.Put(mockImageID, in))
+func (s *FSTestSuite) TearDownTest() {
+	s.NoError(os.RemoveAll(s.FSConfig.Dir))
 }
 
-func TestFSGet(t *testing.T) {
-	out := bytes.NewBuffer(make([]byte, 0, len(mockImageData)))
-	assert.NoError(t, fsStore.Get(mockImageID, out))
-	assert.Equal(t, string(mockImageData), out.String())
+func TestFSTestSuite(t *testing.T) {
+	s := new(FSTestSuite)
+	s.StoreName = "fs"
+	suite.Run(t, s)
 }
 
-func TestFSStat(t *testing.T) {
-	stat, err := fsStore.Stat(mockImageID)
-	assert.NoError(t, err)
-	assert.NotNil(t, stat)
-	assert.EqualValues(t, len(mockImageData), stat.Size())
+func (s *FSTestSuite) TestConfigValidate() {
+	tests := []struct {
+		description string
+		config      *images.FSConfig
+		expectedErr error
+	}{
+		{"empty config should be invalid",
+			&images.FSConfig{}, images.ErrMissingDir},
+		{"config to use for tests should be valid",
+			s.FSConfig, nil},
+	}
+
+	for _, test := range tests {
+		s.Equal(test.expectedErr, test.config.Validate(), test.description)
+	}
 }
 
-func TestFSDelete(t *testing.T) {
-	assert.NoError(t, fsStore.Delete(mockImageID))
+func (s *FSTestSuite) TestInit() {
+	tests := []struct {
+		description string
+		configJSON  string
+		expectedErr bool
+	}{
+		{"bad json should fail",
+			"not actually json", true},
+		{"invalid config should fail",
+			`{}`, true},
+		{"bad dir should fail",
+			`{"dir":"/dev/null"}`, true},
+		{"config to use for tests should succeed",
+			string(s.StoreConfig), false},
+	}
+
+	for _, test := range tests {
+		store := images.NewStore("fs")
+		config := []byte(test.configJSON)
+		err := store.Init(config)
+		if test.expectedErr {
+			s.Error(err, test.description)
+		} else {
+			s.NoError(err, test.description)
+		}
+	}
 }
 
-func TestFSShutdown(t *testing.T) {
-	assert.NoError(t, fsStore.Shutdown())
+func (s *FSTestSuite) TestDelete() {
+	// General Store.Delete tests
+	s.StoreTestSuite.TestDelete()
+
+	// FS specific tests
+
+	// Make sure delete isn't able to delete the directory
+	_ = s.Store.Delete("")
+	_, err := os.Stat(s.FSConfig.Dir)
+	s.NoError(err, "should not delete base directory")
 }

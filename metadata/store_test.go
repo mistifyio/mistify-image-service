@@ -1,91 +1,104 @@
-package metadata
+package metadata_test
 
 import (
-	"io/ioutil"
-	"os"
-	"testing"
-
 	log "github.com/Sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"github.com/mistifyio/mistify-image-service/metadata"
+	"github.com/stretchr/testify/suite"
 )
 
-type MockStore struct{}
+type StoreTestSuite struct {
+	suite.Suite
+	StoreName   string
+	StoreConfig []byte
+	Store       metadata.Store
+	Image       *metadata.Image
+}
 
-func (ms *MockStore) Init(b []byte) error                  { return nil }
-func (ms *MockStore) Shutdown() error                      { return nil }
-func (ms *MockStore) List(s string) ([]*Image, error)      { return []*Image{}, nil }
-func (ms *MockStore) GetByID(s string) (*Image, error)     { return &Image{}, nil }
-func (ms *MockStore) GetBySource(s string) (*Image, error) { return &Image{}, nil }
-func (ms *MockStore) Put(i *Image) error                   { return nil }
-func (ms *MockStore) Delete(s string) error                { return nil }
-
-func TestMain(m *testing.M) {
-	code := 0
-	defer func() {
-		os.Exit(code)
-	}()
-
+func (s *StoreTestSuite) SetupSuite() {
 	log.SetLevel(log.FatalLevel)
-
-	// Store-specific setup
-
-	// KVite
-	testKviteFile, err := ioutil.TempFile("", "kvitetest.db")
-	if err != nil {
-		log.WithField("error", err).Fatal("failed to create kvite temp file")
-		return
+	s.Image = &metadata.Image{
+		ID:     metadata.NewID(),
+		Type:   "kvm",
+		Source: "http://localhost",
 	}
-	testKviteConfig.Filename = testKviteFile.Name()
-	defer func() {
-		if err := os.RemoveAll(testKviteConfig.Filename); err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"filename": testKviteConfig.Filename,
-			}).Error("could not clean up kvite file")
-		}
-	}()
-
-	// Etcd
-	defer func() {
-		es, ok := testEtcdStore.(*etcdStore)
-		if !ok {
-			return
-		}
-		if _, err := es.client.Delete(testEtcdConfig.Prefix, true); err != nil {
-			log.WithFields(log.Fields{
-				"error":  err,
-				"prefix": testEtcdConfig.Prefix,
-			}).Error("could not clean up etcd prefix")
-		}
-	}()
-
-	// Run the tests
-	code = m.Run()
 }
 
-func TestList(t *testing.T) {
-	list := List()
-	assert.NotNil(t, list)
+func (s *StoreTestSuite) SetupTest() {
+	s.Store = metadata.NewStore(s.StoreName)
+	_ = s.Store.Init(s.StoreConfig)
 }
 
-func TestNewStore(t *testing.T) {
-	list := List()
-	if len(list) == 0 {
-		return
+func (s *StoreTestSuite) TestConfigValidate() {
+	// This is going to be unique to each store type
+	s.Fail("test suite does not define TestConfigValidate", s.StoreName)
+}
+
+func (s *StoreTestSuite) TestInit() {
+	// This is going to be unique to each store type based on the config
+	s.Fail("test suite does not define TestInit", s.StoreName)
+}
+
+func (s *StoreTestSuite) Put() {
+	s.NoError(s.Store.Put(s.Image), "complete image should be put")
+}
+
+func (s *StoreTestSuite) TestGetBySource() {
+	_ = s.Store.Put(s.Image)
+
+	// Image exists
+	image, err := s.Store.GetBySource(s.Image.Source)
+	s.NoError(err, "retrieving existing image should not fail")
+	s.NotNil(image, "image should be found")
+	s.Equal(s.Image.ID, image.ID, "image should be what we expect")
+
+	// Image doesn't exist
+	image, err = s.Store.GetBySource("foobar")
+	s.Equal(metadata.ErrNotFound, err, "image shouldn't be found")
+}
+
+func (s *StoreTestSuite) TestGetByID() {
+	_ = s.Store.Put(s.Image)
+
+	// Image exists
+	image, err := s.Store.GetByID(s.Image.ID)
+	s.NoError(err, "retrieving existing image should not fail")
+	s.NotNil(image, "image should be found")
+	s.Equal(s.Image.ID, image.ID, "image should be what we expect")
+
+	// Image doesn't exist
+	image, err = s.Store.GetByID("foobar")
+	s.Equal(metadata.ErrNotFound, err, "image shouldn't be found")
+}
+
+func (s *StoreTestSuite) TestList() {
+	_ = s.Store.Put(s.Image)
+
+	images, err := s.Store.List("")
+	s.NoError(err, "listing all images shouldn't error")
+	s.NotNil(images)
+	s.Len(images, 1, "list should only contain the one image added")
+
+	var found bool
+	for _, image := range images {
+		if image.ID == s.Image.ID {
+			found = true
+			break
+		}
 	}
-
-	assert.NotNil(t, NewStore(list[0]))
-	assert.Nil(t, NewStore("qweryasdf"))
+	s.True(found, "image should be in list")
 }
 
-func TestRegister(t *testing.T) {
-	registerMockStore()
+func (s *StoreTestSuite) TestDelete() {
+	_ = s.Store.Put(s.Image)
 
-	assert.NotNil(t, NewStore("mock"))
+	s.NoError(s.Store.Delete(s.Image.ID), "deleting existing image shouldn't error")
+	image, _ := s.Store.GetByID(s.Image.ID)
+	s.Nil(image, "image should be deleted")
+
+	s.NoError(s.Store.Delete(s.Image.ID), "deleting missing image shouldn't error")
 }
 
-func registerMockStore() {
-	Register("mock", func() Store {
-		return &MockStore{}
-	})
+func (s *StoreTestSuite) TestShutdown() {
+	s.NoError(s.Store.Shutdown(), "shutdown shouldn't error")
+	s.NoError(s.Store.Shutdown(), "second shutdown shouldn't error")
 }

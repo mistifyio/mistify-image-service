@@ -30,7 +30,7 @@ func listImagesHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	imageType := vars["imageType"]
 	if imageType != "" && !metadata.IsValidImageType(imageType) {
-		hr.JSONError(http.StatusBadRequest, errors.New("invalid type"))
+		hr.JSONMsg(http.StatusBadRequest, "invalid type")
 		return
 	}
 
@@ -53,7 +53,7 @@ func receiveImageHandler(w http.ResponseWriter, r *http.Request) {
 
 	imageType := r.Header.Get("X-Image-Type")
 	if !metadata.IsValidImageType(imageType) {
-		hr.JSONError(http.StatusBadRequest, errors.New("invalid X-Image-Type header"))
+		hr.JSONMsg(http.StatusBadRequest, "invalid X-Image-Type header")
 		return
 	}
 
@@ -77,18 +77,18 @@ func fetchImageHandler(w http.ResponseWriter, r *http.Request) {
 
 	image := &metadata.Image{}
 	if err := json.NewDecoder(r.Body).Decode(image); err != nil {
-		hr.JSONError(http.StatusBadRequest, err)
+		hr.JSONMsg(http.StatusBadRequest, err.Error())
 		return
 	}
 	image.ID = metadata.NewID()
 
 	// Ensure sufficient information for fetching
 	if image.Source == "" {
-		hr.JSONError(http.StatusBadRequest, errors.New("missing image source"))
+		hr.JSONMsg(http.StatusBadRequest, "missing image source")
 		return
 	}
 	if !metadata.IsValidImageType(image.Type) {
-		hr.JSONError(http.StatusBadRequest, errors.New("invalid image type"))
+		hr.JSONMsg(http.StatusBadRequest, "invalid image type")
 		return
 	}
 
@@ -165,11 +165,12 @@ func getImage(w http.ResponseWriter, r *http.Request) *metadata.Image {
 	imageID := vars["imageID"]
 	image, err := ctx.MetadataStore.GetByID(imageID)
 	if err != nil {
-		hr.JSONError(http.StatusInternalServerError, err)
-		return nil
-	}
-	if image == nil {
-		hr.JSONError(http.StatusNotFound, errors.New("not found"))
+		code := http.StatusInternalServerError
+		if err == metadata.ErrNotFound {
+			code = http.StatusNotFound
+		}
+
+		hr.JSONError(code, err)
 		return nil
 	}
 

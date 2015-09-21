@@ -11,6 +11,9 @@ import (
 	logx "github.com/mistifyio/mistify-logrus-ext"
 )
 
+// ErrMissingDir is used when the required dir is omitted from the config
+var ErrMissingDir = errors.New("missing dir")
+
 type (
 	// FS is an image store using the filesystem
 	FS struct {
@@ -32,7 +35,7 @@ var fsLogFields = log.Fields{
 // Validate checks whether the config is valid
 func (fsc *FSConfig) Validate() error {
 	if fsc.Dir == "" {
-		return errors.New("empty dir path")
+		return ErrMissingDir
 	}
 	return nil
 }
@@ -90,20 +93,22 @@ func (fs *FS) Shutdown() error {
 	return nil
 }
 
-// filepath generates the full filepath from the image id
-func (fs *FS) filepath(imageID string) string {
-	return filepath.Join(fs.Config.Dir, imageID)
+// imageFilepath generates the full imageFilepath from the image id
+func (fs *FS) imageFilepath(imageID string) string {
+	// Clean the imageID to prevent use of relative paths to get outside of the
+	// configured dir
+	return filepath.Join(fs.Config.Dir, filepath.Clean(imageID))
 }
 
 // Stat retrieves file information about an image
 func (fs *FS) Stat(imageID string) (os.FileInfo, error) {
-	filepath := fs.filepath(imageID)
-	info, err := os.Stat(filepath)
+	imageFilepath := fs.imageFilepath(imageID)
+	info, err := os.Stat(imageFilepath)
 	if err != nil {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
 			"error":    err,
 			"imageID":  imageID,
-			"filepath": filepath,
+			"filepath": imageFilepath,
 		}).Error("failed to stat image")
 	}
 	return info, err
@@ -111,26 +116,26 @@ func (fs *FS) Stat(imageID string) (os.FileInfo, error) {
 
 // Get retrieves an image from the filesystem
 func (fs *FS) Get(imageID string, out io.Writer) error {
-	filepath := fs.filepath(imageID)
-	file, err := os.Open(filepath)
+	imageFilepath := fs.imageFilepath(imageID)
+	file, err := os.Open(imageFilepath)
 	if err != nil {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
 			"error":    err,
 			"imageID":  imageID,
-			"filepath": filepath,
+			"filepath": imageFilepath,
 		}).Error("failed to open image")
 		return err
 	}
 	defer logx.LogReturnedErr(file.Close, log.Fields{
 		"imageID":  imageID,
-		"filepath": filepath,
+		"filepath": imageFilepath,
 	}, "failed to close image file")
 
 	if _, err := io.Copy(out, file); err != nil {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
 			"error":    err,
 			"imageID":  imageID,
-			"filepath": filepath,
+			"filepath": imageFilepath,
 		}).Error("failed to copy image data to output stream")
 		return err
 	}
@@ -140,13 +145,13 @@ func (fs *FS) Get(imageID string, out io.Writer) error {
 
 // Put stores an image in the filesystem
 func (fs *FS) Put(imageID string, in io.Reader) error {
-	filepath := fs.filepath(imageID)
-	file, err := os.Create(filepath)
+	imageFilepath := fs.imageFilepath(imageID)
+	file, err := os.Create(imageFilepath)
 	if err != nil {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
 			"error":    err,
 			"imageID":  imageID,
-			"filepath": filepath,
+			"filepath": imageFilepath,
 		}).Error("failed to create image file")
 		return err
 	}
@@ -156,7 +161,7 @@ func (fs *FS) Put(imageID string, in io.Reader) error {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
 			"error":       err,
 			"imageID":     imageID,
-			"filepath":    filepath,
+			"filepath":    imageFilepath,
 			"desiredMode": mode,
 		}).Error("failed to chmod image file")
 		return err
@@ -166,7 +171,7 @@ func (fs *FS) Put(imageID string, in io.Reader) error {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
 			"error":    err,
 			"imageID":  imageID,
-			"filepath": filepath,
+			"filepath": imageFilepath,
 		}).Error("failed to create image file")
 		return err
 	}
@@ -175,12 +180,19 @@ func (fs *FS) Put(imageID string, in io.Reader) error {
 
 // Delete removes an image from the filesystem
 func (fs *FS) Delete(imageID string) error {
-	filepath := fs.filepath(imageID)
-	if err := os.Remove(filepath); err != nil && !os.IsNotExist(err) {
+	imageFilepath := fs.imageFilepath(imageID)
+
+	// Since os.Remove will remove an empty dir, don't chance it if the
+	// imageFilepath ended up as the base dir
+	if imageFilepath == fs.Config.Dir {
+		return nil
+	}
+
+	if err := os.Remove(imageFilepath); err != nil && !os.IsNotExist(err) {
 		log.WithFields(fsLogFields).WithFields(log.Fields{
 			"error":    err,
 			"imageID":  imageID,
-			"filepath": filepath,
+			"filepath": imageFilepath,
 		}).Error("failed to remove image")
 		return err
 	}

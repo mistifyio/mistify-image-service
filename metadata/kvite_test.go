@@ -1,104 +1,93 @@
-package metadata
+package metadata_test
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/mistifyio/mistify-image-service/metadata"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/suite"
 )
 
-var testKviteConfig = &KViteConfig{
-	Table: "kvitetest",
+type KViteTestSuite struct {
+	StoreTestSuite
+	KViteConfig *metadata.KViteConfig
 }
 
-var testKviteStore Store
-var testKviteImage *Image
+func (s *KViteTestSuite) SetupTest() {
+	// KVite specific test setup
+	dbfile, _ := ioutil.TempFile("", "kviteTest-"+uuid.New()+".db")
+	_ = dbfile.Close()
 
-func TestKViteConfigValidate(t *testing.T) {
-	var kvc *KViteConfig
-
-	kvc = &KViteConfig{}
-	assert.Error(t, kvc.Validate())
-
-	kvc = &KViteConfig{
-		Filename: "/foo",
+	s.KViteConfig = &metadata.KViteConfig{
+		Filename: dbfile.Name(),
+		Table:    "test",
 	}
-	assert.Error(t, kvc.Validate())
+	configBytes, _ := json.Marshal(s.KViteConfig)
+	s.StoreConfig = configBytes
 
-	kvc = &KViteConfig{
-		Table: "foobar",
+	// General store test setup
+	s.StoreTestSuite.SetupTest()
+}
+
+func (s *KViteTestSuite) TearDownTest() {
+	// Clean up kvite file
+	s.NoError(os.Remove(s.KViteConfig.Filename))
+}
+
+func TestKViteTestSuite(t *testing.T) {
+	s := new(KViteTestSuite)
+	s.StoreName = "kvite"
+	suite.Run(t, s)
+}
+
+func (s *KViteTestSuite) TestConfigValidate() {
+	tests := []struct {
+		description string
+		config      *metadata.KViteConfig
+		expectedErr error
+	}{
+		{"empty config should be invalid",
+			&metadata.KViteConfig{}, metadata.ErrMissingFilename},
+		{"filename-only config should be invalid",
+			&metadata.KViteConfig{Filename: "/foo"}, metadata.ErrMissingTable},
+		{"table-only config should be valid",
+			&metadata.KViteConfig{Table: "foo"}, metadata.ErrMissingFilename},
+		{"config to use for tests should be valid",
+			s.KViteConfig, nil},
 	}
-	assert.Error(t, kvc.Validate())
 
-	assert.NoError(t, testKviteConfig.Validate())
+	for _, test := range tests {
+		s.Equal(test.expectedErr, test.config.Validate(), test.description)
+	}
 }
 
-func TestKViteInit(t *testing.T) {
-	kv := NewStore("kvite")
-	assert.Error(t, kv.Init([]byte("not actually json")))
+func (s *KViteTestSuite) TestInit() {
+	tests := []struct {
+		description string
+		configJSON  string
+		expectedErr bool
+	}{
+		{"bad json should fail",
+			"not actually json", true},
+		{"incomplete config should fail",
+			`{"table":"blah"}`, true},
+		{"invalid filename should fail",
+			`{"filename":"/dev/null/foo","table":"foo"}`, true},
+		{"valid config should succeed",
+			string(s.StoreConfig), false},
+	}
 
-	kv = NewStore("kvite")
-	assert.Error(t, kv.Init([]byte(`{"invalid":"config"}`)))
-
-	kv = NewStore("kvite")
-	assert.Error(t, kv.Init([]byte(`{"filename":"/dev/null/foo","table":"bar"}`)))
-
-	kv = NewStore("kvite")
-	configBytes, _ := json.Marshal(testKviteConfig)
-	assert.NoError(t, kv.Init(configBytes))
-
-	testKviteStore = kv
-}
-
-func TestKVitePut(t *testing.T) {
-	assert.NoError(t, testKviteStore.Put(testKviteImage))
-}
-
-func TestKViteGetByID(t *testing.T) {
-	image, err := testKviteStore.GetByID(testKviteImage.ID)
-	assert.NoError(t, err)
-	assert.Equal(t, testKviteImage.ID, image.ID)
-
-	image, err = testKviteStore.GetByID("asdf")
-	assert.NoError(t, err)
-	assert.Nil(t, image)
-}
-
-func TestKViteGetBySource(t *testing.T) {
-	image, err := testKviteStore.GetBySource(testKviteImage.Source)
-	assert.NoError(t, err)
-	assert.Equal(t, testKviteImage.ID, image.ID)
-
-	image, err = testKviteStore.GetBySource("asdf")
-	assert.NoError(t, err)
-	assert.Nil(t, image)
-}
-
-func TestKViteList(t *testing.T) {
-	images, err := testKviteStore.List("")
-	assert.NoError(t, err)
-	var found bool
-	for _, image := range images {
-		if image.ID == testKviteImage.ID {
-			found = true
-			break
+	for _, test := range tests {
+		store := metadata.NewStore("kvite")
+		config := []byte(test.configJSON)
+		err := store.Init(config)
+		if test.expectedErr {
+			s.Error(err, test.description)
+		} else {
+			s.NoError(err, test.description)
 		}
-	}
-	assert.True(t, found)
-}
-
-func TestKViteDelete(t *testing.T) {
-	assert.NoError(t, testKviteStore.Delete(testKviteImage.ID))
-}
-
-func TestKViteShutdown(t *testing.T) {
-	assert.NoError(t, testKviteStore.Shutdown())
-}
-
-func init() {
-	testKviteImage = &Image{
-		ID:     NewID(),
-		Type:   "kvm",
-		Source: "http://localhost",
 	}
 }

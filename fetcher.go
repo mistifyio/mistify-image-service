@@ -39,7 +39,7 @@ func (fetcher *Fetcher) Fetch(image *metadata.Image) (*metadata.Image, error) {
 	// Avoid re-downloading the same image. If a redownload is desired, first
 	// delete the existing image.
 	existingImage, err := fetcher.ctx.MetadataStore.GetBySource(image.Source)
-	if existingImage != nil || err != nil {
+	if existingImage != nil || (err != nil && err != metadata.ErrNotFound) {
 		return existingImage, err
 	}
 

@@ -1,81 +1,83 @@
 package images_test
 
 import (
-	"io"
-	"io/ioutil"
-	"os"
-	"testing"
+	"bytes"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/mistify-image-service/images"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-type MockStore struct{}
-
-func (ms *MockStore) Init(b []byte) error                 { return nil }
-func (ms *MockStore) Shutdown() error                     { return nil }
-func (ms *MockStore) Stat(id string) (os.FileInfo, error) { return *new(os.FileInfo), nil }
-func (ms *MockStore) Get(id string, out io.Writer) error  { return nil }
-func (ms *MockStore) Put(id string, in io.Reader) error   { return nil }
-func (ms *MockStore) Delete(id string) error              { return nil }
-
-var mockImageID = "foobar"
-var mockImageData = []byte("testdatatestdatatestdata")
-
-func TestMain(m *testing.M) {
-	// So that defers run when we exit
-	code := 0
-	defer func() {
-		os.Exit(code)
-	}()
-
-	log.SetLevel(log.WarnLevel)
-
-	// Store-specific setup
-	var err error
-
-	// Filesystem
-	if fsConfig.Dir, err = ioutil.TempDir("", "testimages"); err != nil {
-		log.WithField("error", err).Fatal("failed to create filesystem temp dir")
-		return
-	}
-	defer func() {
-		if err := os.RemoveAll(fsConfig.Dir); err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-				"dir":   fsConfig.Dir,
-			}).Error("could not clean up filesystem")
-		}
-	}()
-
-	// Run the tests
-	code = m.Run()
+type StoreTestSuite struct {
+	suite.Suite
+	StoreName   string
+	StoreConfig []byte
+	Store       images.Store
+	ImageID     string
+	ImageData   []byte
 }
 
-func TestList(t *testing.T) {
-	list := images.List()
-	assert.NotNil(t, list)
+func (s *StoreTestSuite) SetupSuite() {
+	log.SetLevel(log.FatalLevel)
+	s.ImageID = "foobar"
+	s.ImageData = []byte("testdatatestdatatestdata")
 }
 
-func TestNewStore(t *testing.T) {
-	list := images.List()
-	if len(list) == 0 {
-		return
-	}
-
-	assert.NotNil(t, images.NewStore(list[0]))
-	assert.Nil(t, images.NewStore("qwertyasdf"))
+func (s *StoreTestSuite) SetupTest() {
+	s.Store = images.NewStore(s.StoreName)
+	_ = s.Store.Init(s.StoreConfig)
 }
 
-func TestRegister(t *testing.T) {
-	registerMockStore()
-
-	assert.NotNil(t, images.NewStore("mock"))
+func (s *StoreTestSuite) TestConfigValidate() {
+	// This is going to be unique to each store type
+	s.Fail("test suite does not define TestConfigValidate", s.StoreName)
 }
 
-func registerMockStore() {
-	images.Register("mock", func() images.Store {
-		return &MockStore{}
-	})
+func (s *StoreTestSuite) TestInit() {
+	// This is going to be unique to each store type based on the config
+	s.Fail("test suite does not define TestInit", s.StoreName)
+}
+
+func (s *StoreTestSuite) TestPut() {
+	in := bytes.NewReader(s.ImageData)
+	s.NoError(s.Store.Put(s.ImageID, in))
+	s.Error(s.Store.Put("", in), "shouldn't work without id")
+}
+
+func (s *StoreTestSuite) TestStat() {
+	in := bytes.NewReader(s.ImageData)
+	_ = s.Store.Put(s.ImageID, in)
+
+	stat, err := s.Store.Stat(s.ImageID)
+	s.NoError(err)
+	s.NotNil(stat)
+	s.EqualValues(len(s.ImageData), stat.Size())
+
+	stat, err = s.Store.Stat("asdf")
+	s.Error(err)
+}
+
+func (s *StoreTestSuite) TestGet() {
+	in := bytes.NewReader(s.ImageData)
+	_ = s.Store.Put(s.ImageID, in)
+
+	out := bytes.NewBuffer(make([]byte, 0, len(s.ImageData)))
+	s.NoError(s.Store.Get(s.ImageID, out))
+	s.Equal(s.ImageData, out.Bytes())
+
+	s.Error(s.Store.Get("asdf", out))
+	s.Error(s.Store.Get("", out), "missing id should error")
+}
+
+func (s *StoreTestSuite) TestDelete() {
+	in := bytes.NewReader(s.ImageData)
+	_ = s.Store.Put(s.ImageID, in)
+
+	s.NoError(s.Store.Delete(s.ImageID), "deleting existing image shouldn't error")
+	s.NoError(s.Store.Delete("asdf"), "deleting nonexistant image should error")
+	s.NoError(s.Store.Delete(""), "missing id should not error")
+}
+
+func (s *StoreTestSuite) TestShutdown() {
+	s.NoError(s.Store.Shutdown())
 }
