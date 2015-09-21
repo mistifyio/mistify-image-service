@@ -109,7 +109,8 @@ func (s *APITestSuite) TestReceiveImage() {
 	}{
 		{"missing type should fail", "", http.StatusBadRequest},
 		{"invalid type should fail", "asdf", http.StatusBadRequest},
-		{"valid type should succeed", "kvm", http.StatusOK},
+		{"valid type kvm should succeed", "kvm", http.StatusOK},
+		{"valid type container should succeed", "container", http.StatusOK},
 	}
 
 	for _, test := range tests {
@@ -120,12 +121,13 @@ func (s *APITestSuite) TestReceiveImage() {
 		image, resp, err := s.uploadImage(test.imageType)
 		s.Equal(test.expectedStatusCode, resp.StatusCode, msg("status code should be expected"))
 		if test.expectedStatusCode != http.StatusOK {
+			s.Nil(image)
 			continue
 		}
 
 		s.NoError(err, msg("upload shouldn't error"))
 		s.NotEmpty(image.ID, msg("should have ID assigned"))
-		s.Equal(metadata.StatusComplete, image.Status, msg("final stauts should be complete"))
+		s.Equal(metadata.StatusComplete, image.Status, msg("final status should be complete"))
 		s.EqualValues(len(s.ImageData), image.Size, msg("final size should be expected"))
 	}
 }
@@ -140,10 +142,15 @@ func (s *APITestSuite) TestFetchImage() {
 			[]byte("asdf"), http.StatusBadRequest},
 		{"missing source should fail",
 			[]byte(`{}`), http.StatusBadRequest},
-		{"missing or invalid image type should fail",
+		{"missing image type should fail",
 			[]byte(fmt.Sprintf(`{"source":"%s"}`, s.FetchServer.URL)), http.StatusBadRequest},
-		{"complete request should succeed",
+		{"invalid image type should fail",
+			[]byte(fmt.Sprintf(`{"source":"%s","type":"asdf"}`, s.FetchServer.URL)), http.StatusBadRequest},
+		{"complete kvm request should succeed",
 			[]byte(fmt.Sprintf(`{"source":"%s","type":"kvm"}`, s.FetchServer.URL)), http.StatusAccepted},
+		{"complete container request should succeed",
+			// Modify url slightly to prevent it using prefetched image
+			[]byte(fmt.Sprintf(`{"source":"%s","type":"container"}`, s.FetchServer.URL+"?")), http.StatusAccepted},
 	}
 
 	for _, test := range tests {
