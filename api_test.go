@@ -286,7 +286,7 @@ func (s *APITestSuite) TestDownloadImage() {
 
 	resp, err = http.Get(s.imageURL("asdf") + "/download")
 	s.NoError(err)
-	defer logx.LogReturnedErr(resp.Body.Close, nil, "failed to close fetch response body")
+	logx.LogReturnedErr(resp.Body.Close, nil, "failed to close fetch response body")
 	s.Equal(http.StatusNotFound, resp.StatusCode)
 
 }
