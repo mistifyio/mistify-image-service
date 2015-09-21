@@ -264,13 +264,13 @@ func (s *APITestSuite) TestDeleteImage() {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	s.NoError(err)
-	defer logx.LogReturnedErr(resp.Body.Close, nil, "failed to close fetch response body")
+	logx.LogReturnedErr(resp.Body.Close, nil, "failed to close fetch response body")
 	s.Equal(http.StatusOK, resp.StatusCode)
 
 	req, _ = http.NewRequest("DELETE", s.imageURL("asdf"), nil)
 	resp, err = client.Do(req)
 	s.NoError(err)
-	defer logx.LogReturnedErr(resp.Body.Close, nil, "failed to close fetch response body")
+	logx.LogReturnedErr(resp.Body.Close, nil, "failed to close fetch response body")
 	s.Equal(http.StatusNotFound, resp.StatusCode)
 }
 
