@@ -1,15 +1,22 @@
 language: go
 dist: trusty
 
+env:
+  - V_ETCD: 2.1.1
+
 go:
   - 1.5
 
 before_install:
   - go get github.com/alecthomas/gometalinter
   - gometalinter --install --update
+  - curl -L https://github.com/coreos/etcd/releases/download/v$V_ETCD/etcd-v$V_ETCD-linux-amd64.tar.gz | tar vxz -C /tmp
 
 install:
   - go get -t -v ./...
+
+before_script:
+  - /tmp/etcd-v$V_ETCD-linux-amd64/etcd &
 
 script:
   - go test -v ./...
