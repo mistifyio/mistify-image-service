@@ -1,0 +1,36 @@
+language: go
+dist: trusty
+
+env:
+  - V_ETCD=2.1.1
+  - V_ETCD=2.2.0
+  # latest
+  - V_ETCD=2.2.5
+
+go:
+  - 1.5
+  - 1.6
+  - tip
+
+before_install:
+  - go get github.com/alecthomas/gometalinter
+  - gometalinter --install --update
+  - curl -L https://github.com/coreos/etcd/releases/download/v$V_ETCD/etcd-v$V_ETCD-linux-amd64.tar.gz | tar vxz -C /tmp
+
+install:
+  - go get -t -v ./...
+
+before_script:
+  - /tmp/etcd-v$V_ETCD-linux-amd64/etcd &
+
+script:
+  - gometalinter --disable-all --enable=goimports --enable=errcheck --enable=vet --enable=gofmt --enable=golint --enable=vetshadow --deadline=30s ./...
+  - go test -v ./...
+
+after_success:
+  - gometalinter --disable=errcheck --disable=vet --disable=gofmt --disable=golint --disable=vetshadow --deadline=30s ./...
+
+notifications:
+  email: false
+  slack:
+    secure: "NVGQoHmMEdZUawsTRQPCm/htJ8rE8dPSEzkY/BlSLoG5IJ1LtgpXh6PvYZFkQDV1CBiQyyfo4Fl/nI1PwQua2/dzpqVeD4GqvB7A3Iz1wLzMEJx82//jcvH2lEIKn3xvWaaBY0e3ogk6NgtVY7pgQxaoOgch3jww83y3xmy7DH5KNgPHfhsWpFgCX1Lezh/6XixuY6k47KRmertpEiCKsf5G2fEOO2Yv7X98RJQuQ6c+r8OJEVpidC6Eeq/8wp2RunM39TZHkFTL2LpVn7t0lFjBe8bZwOd2RYVZppRUWgq/JZA4m9bsTKP9jtNp03mMI3/GjHXeXYnT0sBZi0wO53KDUYezEKeNL4LGhpkXUliD15DZN4EWjuUPgGQHX4Qb1BIlLCFmlpdOogCaVv0qWpmQa5poQnvomjWKMd9dILuw1Vc3bsTkcI5KYm1nOvMWBRauDfzx7LcrkrNIPPSV1L7NsLmDD0DVOYc+g/luVPRR+Him7tUzTxibGpKHgUJTb+Et105qgKDnf2KU6A3kagjSFIm7HOGhvqhf4i2KxDMqLE14LCyTnExON0RTdu/Img3GVBkQwHgFF0efJCEmt3BhdUd/su8mjlevIuYzFWJhs/fy6ChRqkT+jap+M8IGBHajv3LwBG1iVFfobM7wwqTTScTLnV+mqoz/2jd8kJo="

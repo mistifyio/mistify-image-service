@@ -20,10 +20,10 @@ const (
 	ImageTypeContainer = "container"
 )
 
-// Map of valid image types for quick lookups
+// ValidImageTypes is a map of valid image types for quick lookups
 var ValidImageTypes = map[string]struct{}{
-	ImageTypeKVM:       struct{}{},
-	ImageTypeContainer: struct{}{},
+	ImageTypeKVM:       {},
+	ImageTypeContainer: {},
 }
 
 type (

@@ -133,11 +133,12 @@ func (s *FetcherTestSuite) TestFetcherFetch() {
 			Type:   "kvm",
 		}
 		imageReq.Source = test.source
-		image, err := s.Context.Fetcher.Fetch(imageReq)
+		var image *metadata.Image
+		image, err = s.Context.Fetcher.Fetch(imageReq)
 		s.NoError(err, "valid config should have no initial error")
 		s.Equal(metadata.StatusPending, image.Status, "new image should start out pending")
 		for i := 0; i < 300; i++ {
-			image, err := s.Context.MetadataStore.GetByID(image.ID)
+			image, err = s.Context.MetadataStore.GetByID(image.ID)
 			s.NotNil(image, "image should not be nil")
 			s.NoError(err)
 
